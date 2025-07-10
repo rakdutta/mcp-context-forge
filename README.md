@@ -255,17 +255,23 @@ python3 -m mcpgateway.translate --stdio "uvx mcp-server-git" --port 9000
 # 2️⃣  Register it with the gateway
 curl -s -X POST -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"name":"fast_time","url":"http://localhost:8002/sse"}' \
+     -d '{"name":"fast_time","url":"http://localhost:9000/sse"}' \
      http://localhost:4444/gateways
 
 # 3️⃣  Verify tool catalog
 curl -s -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" http://localhost:4444/tools | jq
 
-# 4️⃣  Create a *virtual server* bundling those tools
+# 4️⃣  Create a *virtual server* bundling those tools. Use the ID of tool from the tool catalog (Step #3) and pass them in the associatedTools list.
 curl -s -X POST -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"name":"time_server","description":"Fast time tools","associatedTools":["1"]}' \
+     -d '{"name":"time_server","description":"Fast time tools","associatedTools":[<ID_OF_TOOLS>]}' \
      http://localhost:4444/servers | jq
+
+# Example curl
+curl -s -X POST -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN"      
+     -H "Content-Type: application/json"      
+     -d '{"name":"time_server","description":"Fast time tools","associatedTools":["6018ca46d32a4ac6b4c054c13a1726a2"]}' \
+     http://localhost:4444/servers | jq   
 
 # 5️⃣  List servers (should now include the UUID of the newly created virtual server)
 curl -s -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" http://localhost:4444/servers | jq
