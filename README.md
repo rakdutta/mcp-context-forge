@@ -261,7 +261,7 @@ curl -s -X POST -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
 # 3️⃣  Verify tool catalog
 curl -s -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" http://localhost:4444/tools | jq
 
-# 4️⃣  Create a *virtual server* bundling those tools. Use the ID of tool from the tool catalog (Step #3) and pass them in the associatedTools list.
+# 4️⃣  Create a *virtual server* bundling those tools. Use the ID of tools from the tool catalog (Step #3) and pass them in the associatedTools list.
 curl -s -X POST -H "Authorization: Bearer $MCPGATEWAY_BEARER_TOKEN" \
      -H "Content-Type: application/json" \
      -d '{"name":"time_server","description":"Fast time tools","associatedTools":[<ID_OF_TOOLS>]}' \
