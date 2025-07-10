@@ -67,30 +67,6 @@ Once the agent is created, you can use it to perform tasks:
 response = agent.run("Use the 'weather' tool to get the forecast for Dublin.")
 print(response)
 ```
-
----
-##  Sample Curl Statement
-curl -X POST http://localhost:<your_port>/agent_langchain/invoke \
-  -H "Content-Type: application/json" \
-  -H "Integrations-API-Key: <api_token>" \
-  -d '{
-	"query": "<Your Query/Prompt>",
-	"llm_override": [
-		"<provider_name>",
-		"<your_language_model>"
-	],
-	"mcp_servers": [
-		{
-			"url": "http://localhost:4444/servers/<MCP Servers Catalog id>/sse",
-			"headers": {
-				"Authorization": "Bearer <BEARER-TOKEN>"
-			}
-		}
-	]
-}'   
-
-
-
 ## 📚 Additional Resources
 
 * [LangChain MCP Adapters Documentation](https://langchain-ai.github.io/langgraph/agents/mcp/)
