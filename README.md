@@ -361,6 +361,12 @@ Browse to **[http://localhost:4444/admin](http://localhost:4444/admin)** (user `
 ```bash
 mkdir -p $(pwd)/data
 
+touch $(pwd)/data/mcp.db
+
+sudo chown -R :docker $(pwd)/data
+
+chmod 777 $(pwd)/data
+
 docker run -d --name mcpgateway \
   --restart unless-stopped \
   -p 4444:4444 \
