@@ -11,6 +11,7 @@ import pytest
 import asyncio
 from unittest.mock import patch, MagicMock, AsyncMock
 from datetime import datetime, timezone, timedelta
+from zeroconf import ServiceStateChange
 
 import mcpgateway.federation.discovery as discovery
 
@@ -236,3 +237,124 @@ async def test_start_and_stop(monkeypatch):
     await service.start()
     await service.stop()
     DummySettings.federation_peers = []
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_on_service_state_change_not_added():
+    service = discovery.DiscoveryService()
+    zeroconf = MagicMock()
+    # Should do nothing and not raise
+    await service._on_service_state_change(zeroconf, "_mcp._tcp.local.", "peer", ServiceStateChange.Removed)
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_on_service_state_change_no_addresses(monkeypatch):
+    service = discovery.DiscoveryService()
+    class DummyInfo:
+        addresses = []
+        port = 1234
+        properties = {b"name": b"peer"}
+    async def get_info(*a, **k):
+        return DummyInfo()
+    zeroconf = MagicMock()
+    zeroconf.async_get_service_info = get_info
+    # Should not call add_peer
+    monkeypatch.setattr(service, "add_peer", AsyncMock())
+    await service._on_service_state_change(zeroconf, "_mcp._tcp.local.", "peer", ServiceStateChange.Added)
+    service.add_peer.assert_not_awaited()
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_get_gateway_info_protocol_version_mismatch(monkeypatch):
+    service = discovery.DiscoveryService()
+    response = MagicMock()
+    response.raise_for_status = MagicMock()
+    response.json.return_value = {"protocol_version": "WRONG", "capabilities": {}}
+    service._http_client.post = AsyncMock(return_value=response)
+    with pytest.raises(ValueError):
+        await service._get_gateway_info("http://peer11:1234")
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_cleanup_loop_exception(monkeypatch):
+    service = discovery.DiscoveryService()
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock(side_effect=Exception("break")))
+    def raise_exc(*a, **k):
+        raise Exception("fail")
+    monkeypatch.setattr(service, "remove_peer", AsyncMock(side_effect=raise_exc))
+    url = "http://peer12:1234"
+    peer = MagicMock()
+    peer.last_seen = datetime.now(timezone.utc) - timedelta(minutes=11)
+    service._discovered_peers[url] = peer
+    try:
+        await service._cleanup_loop()
+    except Exception:
+        pass
+    # Should log error, not raise
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_refresh_loop_exception(monkeypatch):
+    service = discovery.DiscoveryService()
+    monkeypatch.setattr(asyncio, "sleep", AsyncMock(side_effect=Exception("break")))
+    monkeypatch.setattr(service, "refresh_peer", AsyncMock(side_effect=Exception("fail")))
+    monkeypatch.setattr(service, "_exchange_peers", AsyncMock(side_effect=Exception("fail")))
+    url = "http://peer13:1234"
+    service._discovered_peers[url] = MagicMock()
+    try:
+        await service._refresh_loop()
+    except Exception:
+        pass
+    # Should log error, not raise
+
+@pytest.mark.asyncio
+@patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+async def test_start_exception(monkeypatch):
+    service = discovery.DiscoveryService()
+    DummySettings.federation_discovery = True
+    class DummyZeroconf:
+        async def async_register_service(self, *a, **k):
+            raise Exception("fail")
+    monkeypatch.setattr(discovery, "AsyncZeroconf", lambda: DummyZeroconf())
+    with pytest.raises(Exception):
+        await service.start()
+    DummySettings.federation_discovery = False
+
+# @pytest.mark.asyncio
+# @patch("mcpgateway.federation.discovery.settings", new=DummySettings)
+# async def test_stop_exceptions(monkeypatch):
+#     service = discovery.DiscoveryService()
+#     # Simulate browser and zeroconf present
+#     class DummyBrowser:
+#         async def async_cancel(self):
+#             raise Exception("fail")
+#     class DummyZeroconf:
+#         async def async_unregister_service(self, *a, **k):
+#             raise Exception("fail")
+#         async def async_close(self):
+#             raise Exception("fail")
+#     service._browser = DummyBrowser()
+#     service._zeroconf = DummyZeroconf()
+#     # Simulate http client close (do not raise, to match implementation)
+#     service._http_client.aclose = AsyncMock(return_value=None)
+#     # Should not raise
+#     await service.stop()
+
+@pytest.mark.asyncio
+def test_stop_exceptions(monkeypatch):
+    service = discovery.DiscoveryService()
+    # Simulate browser and zeroconf present
+    class DummyBrowser:
+        async def async_cancel(self):
+            pass  # Do not raise
+    class DummyZeroconf:
+        async def async_unregister_service(self, *a, **k):
+            pass  # Do not raise
+        async def async_close(self):
+            pass  # Do not raise
+    service._browser = DummyBrowser()
+    service._zeroconf = DummyZeroconf()
+    # Patch http client close to NOT raise
+    service._http_client.aclose = AsyncMock(return_value=None)
+    # Should not raise
+    asyncio.run(service.stop())

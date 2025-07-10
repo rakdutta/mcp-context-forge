@@ -384,6 +384,14 @@ SQLite now lives on the host at `./data/mcp.db`.
 #### 3 - Local tool discovery (host network)
 
 ```bash
+mkdir -p $(pwd)/data
+
+touch $(pwd)/data/mcp.db
+
+sudo chown -R :docker $(pwd)/data
+
+chmod 777 $(pwd)/data
+
 docker run -d --name mcpgateway \
   --network=host \
   -e HOST=0.0.0.0 \
@@ -414,6 +422,12 @@ podman run -d --name mcpgateway \
 ```bash
 mkdir -p $(pwd)/data
 
+touch $(pwd)/data/mcp.db
+
+sudo chown -R :docker $(pwd)/data
+
+chmod 777 $(pwd)/data
+
 podman run -d --name mcpgateway \
   --restart=on-failure \
   -p 4444:4444 \
@@ -425,6 +439,14 @@ podman run -d --name mcpgateway \
 #### 3 - Host networking (rootless)
 
 ```bash
+mkdir -p $(pwd)/data
+
+touch $(pwd)/data/mcp.db
+
+sudo chown -R :docker $(pwd)/data
+
+chmod 777 $(pwd)/data
+
 podman run -d --name mcpgateway \
   --network=host \
   -v $(pwd)/data:/data \
