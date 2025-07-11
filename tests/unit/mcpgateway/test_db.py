@@ -82,6 +82,7 @@ def test_resource_metrics_properties():
     assert resource.avg_response_time == 1.5
     assert resource.last_execution_time == now + timedelta(seconds=1)
 
+
 def test_resource_metrics_properties_empty():
     resource = db.Resource()
     resource.metrics = []
