@@ -263,7 +263,8 @@ async def database_exception_handler(request: Request, exc: IntegrityError):
     return JSONResponse(
         status_code=409,
         content=ErrorFormatter.format_database_error(exc)
-    )  
+    )
+
 
 class DocsAuthMiddleware(BaseHTTPMiddleware):
     """
@@ -439,11 +440,8 @@ async def invalidate_resource_cache(uri: Optional[str] = None) -> None:
     else:
         resource_cache.clear()
 
-  
 
-#################
 # Protocol APIs #
-#################
 @protocol_router.post("/initialize")
 async def initialize(request: Request, user: str = Depends(require_auth)) -> InitializeResult:
     """

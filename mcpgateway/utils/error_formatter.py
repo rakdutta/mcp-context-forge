@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError, DatabaseError
 
 logger = logging.getLogger(__name__)
 
+
 class ErrorFormatter:
     """
     Transform technical errors into user-friendly messages.
@@ -57,7 +58,7 @@ class ErrorFormatter:
             "message": "Validation failed",
             "details": errors,
             "success": False
-        }
+}
     
     @staticmethod
     def _get_user_message(field: str, technical_msg: str) -> str:
