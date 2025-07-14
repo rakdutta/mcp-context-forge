@@ -810,7 +810,7 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
         auth_header_key=form.get("auth_header_key", ""),
         auth_header_value=form.get("auth_header_value", ""),
     )
-    
+        
     try:
         await gateway_service.register_gateway(db, gateway)
         return JSONResponse(

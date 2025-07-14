@@ -1,5 +1,3 @@
-
-
 # -*- coding: utf-8 -*-
 """MCP Gateway Centralized for Pydantic validation error, SQL exception.
 
@@ -58,8 +56,8 @@ class ErrorFormatter:
             "message": "Validation failed",
             "details": errors,
             "success": False
-}
-    
+        }
+
     @staticmethod
     def _get_user_message(field: str, technical_msg: str) -> str:
         """
@@ -86,7 +84,7 @@ class ErrorFormatter:
 
         # Default fallback
         return f"Invalid {field}"
-    
+
     @staticmethod
     def format_database_error(error: DatabaseError) -> Dict[str, Any]:
         """
