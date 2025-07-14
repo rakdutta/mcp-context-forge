@@ -830,7 +830,7 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
         if isinstance(ex, IntegrityError):
             return JSONResponse(
                 status_code=409,
-                content=ErrorFormatter.format_database_error(exc)
+                content=ErrorFormatter.format_database_error(ex)
             )
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
