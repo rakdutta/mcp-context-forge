@@ -28,6 +28,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import httpx
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from pydantic import ValidationError
 
 # First-Party
 from mcpgateway.config import settings
@@ -67,6 +69,7 @@ from mcpgateway.services.tool_service import (
 )
 from mcpgateway.utils.create_jwt_token import get_jwt_token
 from mcpgateway.utils.verify_credentials import require_auth, require_basic_auth
+from mcpgateway.utils.error_formatter import ErrorFormatter
 
 # Initialize services
 server_service = ServerService()
@@ -807,6 +810,7 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
         auth_header_key=form.get("auth_header_key", ""),
         auth_header_value=form.get("auth_header_value", ""),
     )
+    
     try:
         await gateway_service.register_gateway(db, gateway)
         return JSONResponse(
@@ -821,8 +825,11 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=400)
         if isinstance(ex, RuntimeError):
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+        if isinstance(ex, ValidationError):
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            return JSONResponse(content=ErrorFormatter.format_database_error(ex), status_code=409)
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
-
 
 @admin_router.post("/gateways/{gateway_id}/edit")
 async def admin_edit_gateway(
