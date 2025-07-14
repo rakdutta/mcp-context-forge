@@ -831,6 +831,7 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
             return JSONResponse(content=ErrorFormatter.format_database_error(ex), status_code=409)
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
+
 @admin_router.post("/gateways/{gateway_id}/edit")
 async def admin_edit_gateway(
     gateway_id: str,

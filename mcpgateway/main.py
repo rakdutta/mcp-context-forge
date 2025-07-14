@@ -247,13 +247,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-#Global exceptions handlers
+
+# Global exceptions handlers
+
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
     return JSONResponse(
         status_code=422,
         content=ErrorFormatter.format_validation_error(exc)
     )
+
 
 @app.exception_handler(IntegrityError)
 async def database_exception_handler(request: Request, exc: IntegrityError):
