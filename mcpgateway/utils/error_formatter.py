@@ -113,11 +113,11 @@ class ErrorFormatter:
                 elif "resources.uri" in error_str:
                     return {"message": "A resource with this URI already exists", "success": False}
             elif "FOREIGN KEY constraint failed" in error_str:
-                 return {"message": "Referenced item not found", "success": False}
+                return {"message": "Referenced item not found", "success": False}
             elif "NOT NULL constraint failed" in error_str:
-                 return {"message": "Required field is missing", "success": False}
+                return {"message": "Required field is missing", "success": False}
             elif "CHECK constraint failed:" in error_str:
-                 return {"message": "Gateway validation failed. Please check the input data.", "success": False}    
+                return {"message": "Gateway validation failed. Please check the input data.", "success": False}
 
         # Generic database error
         return {"message": "Unable to complete the operation. Please try again.", "success": False}
