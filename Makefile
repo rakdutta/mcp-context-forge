@@ -1107,8 +1107,10 @@ podman-shell:
 
 .PHONY: docker-dev docker docker-run docker-run-ssl docker-stop docker-test
 
-IMG_DOCKER_DEV  = $(IMG)-dev:latest
-IMG_DOCKER_PROD = $(IMG):latest
+#IMG_DOCKER_DEV  = $(IMG)-dev:latest
+#IMG_DOCKER_PROD = $(IMG):latest
+IMG_DOCKER_DEV  = $(IMG)-dev
+IMG_DOCKER_PROD = $(IMG)
 
 docker-dev:
 	@echo "🐋  Building dev Docker image..."
@@ -1123,7 +1125,7 @@ docker-prod:
 	docker build \
 	             --platform=linux/amd64 \
 	             -f Containerfile.lite \
-	             -t $(IMG_PROD) \
+	             -t $(IMG_DOCKER_PROD) \
 	             .
 	docker images $(IMG_PROD)
 
