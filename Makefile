@@ -1052,6 +1052,173 @@ publish-testpypi: verify   ## Verify, then upload to TestPyPI
 	@/bin/bash -c "source $(VENV_DIR)/bin/activate && twine upload --repository testpypi dist/*"
 	@echo "🚀  Upload finished - check https://test.pypi.org/project/$(PROJECT_NAME)/"
 
+# Allow override via environment
+ifdef FORCE_DOCKER
+  CONTAINER_RUNTIME := docker
+endif
+
+ifdef FORCE_PODMAN
+  CONTAINER_RUNTIME := podman
+endif
+
+# Support for CI/CD environments
+ifdef CI
+  # Many CI systems have docker command that's actually podman
+  CONTAINER_RUNTIME := $(shell $(CONTAINER_RUNTIME) --version | grep -q podman && echo podman || echo docker)
+endif	
+
+
+# =============================================================================
+# 🐳 CONTAINER RUNTIME CONFIGURATION
+# =============================================================================
+
+# Auto-detect container runtime if not specified
+CONTAINER_RUNTIME ?= $(shell command -v podman >/dev/null 2>&1 && echo podman || echo docker)
+print-runtime:
+	@echo Using container runtime: $(CONTAINER_RUNTIME)
+# Base image name (without any prefix)
+IMAGE_BASE := mcpgateway/mcpgateway
+IMAGE_TAG := latest
+
+# Handle runtime-specific image naming
+ifeq ($(CONTAINER_RUNTIME),podman)
+  # Podman adds localhost/ prefix for local builds
+  IMAGE_LOCAL := localhost/$(IMAGE_BASE):$(IMAGE_TAG)
+  IMAGE_LOCAL_DEV := localhost/$(IMAGE_BASE)-dev:$(IMAGE_TAG)
+  IMAGE_PUSH := $(IMAGE_BASE):$(IMAGE_TAG)
+else
+  # Docker doesn't add prefix
+  IMAGE_LOCAL := $(IMAGE_BASE):$(IMAGE_TAG)
+  IMAGE_LOCAL_DEV := $(IMAGE_BASE)-dev:$(IMAGE_TAG)
+  IMAGE_PUSH := $(IMAGE_BASE):$(IMAGE_TAG)
+endif
+
+print-image:
+	@echo "🐳 Container Runtime: $(CONTAINER_RUNTIME)"
+	@echo "Using image: $(IMAGE_LOCAL)"
+	@echo "Development image: $(IMAGE_LOCAL_DEV)"
+	@echo "Push image: $(IMAGE_PUSH)"
+
+# Legacy compatibility
+IMG := $(IMAGE_LOCAL)
+IMG-DEV := $(IMAGE_LOCAL_DEV)
+
+# Function to get the actual image name as it appears in image list
+define get_image_name
+$(shell $(CONTAINER_RUNTIME) images --format "{{.Repository}}:{{.Tag}}" | grep -E "(localhost/)?$(IMAGE_BASE):$(IMAGE_TAG)" | head -1)
+endef
+
+# Function to normalize image name for operations
+define normalize_image
+$(if $(findstring localhost/,$(1)),$(1),$(if $(filter podman,$(CONTAINER_RUNTIME)),localhost/$(1),$(1)))
+endef
+
+# =============================================================================
+# 🐳 UNIFIED CONTAINER OPERATIONS
+# =============================================================================
+# help: 🐳 CONTAINER OPERATIONS (Auto-detects Docker/Podman)
+# help: container-build     - Build image using detected runtime
+# help: container-run       - Run container using detected runtime
+# help: container-push      - Push image (handles localhost/ prefix)
+# help: container-info      - Show runtime and image information
+
+.PHONY: container-build container-run container-push container-info \
+        container-stop container-logs container-shell
+
+container-info:
+	@echo "🐳 Container Runtime Configuration"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "Runtime:        $(CONTAINER_RUNTIME)"
+	@echo "Base Image:     $(IMAGE_BASE)"
+	@echo "Tag:            $(IMAGE_TAG)"
+	@echo "Local Image:    $(IMAGE_LOCAL)"
+	@echo "Push Image:     $(IMAGE_PUSH)"
+	@echo "Actual Image:   $(call get_image_name)"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+container-build:
+	@echo "🔨 Building with $(CONTAINER_RUNTIME)..."
+	$(CONTAINER_RUNTIME) build \
+		--platform=linux/amd64 \
+		-f Containerfile.lite \
+		--tag $(IMAGE_BASE):$(IMAGE_TAG) \
+		.
+	@echo "✅ Built image: $(call get_image_name)"
+
+container-run: container-check-image
+	@echo "🚀 Running with $(CONTAINER_RUNTIME)..."
+	-$(CONTAINER_RUNTIME) stop $(PROJECT_NAME) 2>/dev/null || true
+	-$(CONTAINER_RUNTIME) rm $(PROJECT_NAME) 2>/dev/null || true
+	$(CONTAINER_RUNTIME) run --name $(PROJECT_NAME) \
+		--env-file=.env \
+		-p 4444:4444 \
+		--restart=always \
+		-d $(call get_image_name)
+	@echo "✅ Container started"
+
+container-push: container-check-image
+	@echo "📤 Preparing to push image..."
+	@# For Podman, we need to remove localhost/ prefix for push
+	@if [ "$(CONTAINER_RUNTIME)" = "podman" ] && [ -n "$(findstring localhost/,$(call get_image_name))" ]; then \
+		echo "🏷️  Tagging for push (removing localhost/ prefix)..."; \
+		$(CONTAINER_RUNTIME) tag $(IMAGE_LOCAL) $(IMAGE_PUSH); \
+	fi
+	$(CONTAINER_RUNTIME) push $(IMAGE_PUSH)
+	@echo "✅ Pushed: $(IMAGE_PUSH)"
+
+container-check-image:
+	@if ! $(CONTAINER_RUNTIME) image exists $(call get_image_name) 2>/dev/null && \
+	    ! $(CONTAINER_RUNTIME) images -q $(IMAGE_LOCAL) 2>/dev/null | grep -q .; then \
+		echo "❌ Image not found: $(IMAGE_LOCAL)"; \
+		echo "💡 Run 'make container-build' first"; \
+		exit 1; \
+	fi
+
+container-stop:
+	@echo "🛑 Stopping container..."
+	-$(CONTAINER_RUNTIME) stop $(PROJECT_NAME) 2>/dev/null || true
+	-$(CONTAINER_RUNTIME) rm $(PROJECT_NAME) 2>/dev/null || true
+
+container-logs:
+	@echo "📜 Streaming logs (Ctrl+C to exit)..."
+	$(CONTAINER_RUNTIME) logs -f $(PROJECT_NAME)
+
+container-shell:
+	@echo "🔧 Opening shell in container..."
+	$(CONTAINER_RUNTIME) exec -it $(PROJECT_NAME) /bin/bash || \
+	$(CONTAINER_RUNTIME) exec -it $(PROJECT_NAME) /bin/sh
+
+container-build-multi:
+	@$(CONTAINER_RUNTIME) buildx build \
+		--platform=linux/amd64,linux/arm64 \
+		--tag $(IMAGE_BASE):$(IMAGE_TAG) \
+		.
+
+
+# Helper targets for debugging image issues
+.PHONY: image-list image-clean image-retag
+
+image-list:
+	@echo "📋 Images matching $(IMAGE_BASE):"
+	@$(CONTAINER_RUNTIME) images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Created}}\t{{.Size}}" | \
+		grep -E "(IMAGE|$(IMAGE_BASE))" || echo "No matching images found"
+
+image-clean:
+	@echo "🧹 Removing all $(IMAGE_BASE) images..."
+	@$(CONTAINER_RUNTIME) images --format "{{.Repository}}:{{.Tag}}" | \
+		grep -E "(localhost/)?$(IMAGE_BASE)" | \
+		xargs -r $(CONTAINER_RUNTIME) rmi -f
+	@echo "✅ Images cleaned"
+
+# Fix image naming issues
+image-retag:
+	@echo "🏷️  Retagging images for consistency..."
+	@if [ "$(CONTAINER_RUNTIME)" = "podman" ]; then \
+		$(CONTAINER_RUNTIME) tag $(IMAGE_BASE):$(IMAGE_TAG) $(IMAGE_LOCAL) 2>/dev/null || true; \
+	else \
+		$(CONTAINER_RUNTIME) tag $(IMAGE_LOCAL) $(IMAGE_BASE):$(IMAGE_TAG) 2>/dev/null || true; \
+	fi
+
 # =============================================================================
 # 🦭 PODMAN CONTAINER BUILD & RUN
 # =============================================================================
@@ -1069,8 +1236,7 @@ publish-testpypi: verify   ## Verify, then upload to TestPyPI
 
 .PHONY: podman-dev podman podman-run podman-run-shell podman-run-ssl podman-stop podman-test
 
-IMG               ?= $(PROJECT_NAME)/$(PROJECT_NAME)
-IMG_DEV            = $(IMG)-dev
+IMG_DEV            = $(IMG-DEV)
 IMG_PROD           = $(IMG)
 
 podman-dev:
@@ -1094,20 +1260,26 @@ podman-prod:
 	             .
 	podman images $(IMG_PROD)
 
+podman-build:
+	@$(MAKE) container-build CONTAINER_RUNTIME=podman
+
 ## --------------------  R U N   (HTTP)  ---------------------------------------
+# podman-run:
+# 	@echo "🚀  Starting podman container (HTTP)..."
+# 	-podman stop $(PROJECT_NAME) 2>/dev/null || true
+# 	-podman rm   $(PROJECT_NAME) 2>/dev/null || true
+# 	podman run --name $(PROJECT_NAME) \
+# 		--env-file=.env \
+# 		-p 4444:4444 \
+# 		--restart=always --memory=$(CONTAINER_MEMORY) --cpus=$(CONTAINER_CPUS) \
+# 		--health-cmd="curl --fail http://localhost:4444/health || exit 1" \
+# 		--health-interval=1m --health-retries=3 \
+# 		--health-start-period=30s --health-timeout=10s \
+# 		-d $(IMG_PROD)
+# 	@sleep 2 && podman logs $(PROJECT_NAME) | tail -n +1
+
 podman-run:
-	@echo "🚀  Starting podman container (HTTP)..."
-	-podman stop $(PROJECT_NAME) 2>/dev/null || true
-	-podman rm   $(PROJECT_NAME) 2>/dev/null || true
-	podman run --name $(PROJECT_NAME) \
-		--env-file=.env \
-		-p 4444:4444 \
-		--restart=always --memory=$(CONTAINER_MEMORY) --cpus=$(CONTAINER_CPUS) \
-		--health-cmd="curl --fail http://localhost:4444/health || exit 1" \
-		--health-interval=1m --health-retries=3 \
-		--health-start-period=30s --health-timeout=10s \
-		-d $(IMG_PROD)
-	@sleep 2 && podman logs $(PROJECT_NAME) | tail -n +1
+	@$(MAKE) container-run CONTAINER_RUNTIME=podman
 
 podman-run-shell:
 	@echo "🚀  Starting podman container shell..."
@@ -1156,8 +1328,7 @@ podman-run-ssl-host: certs
 	@sleep 2 && podman logs $(PROJECT_NAME) | tail -n +1
 
 podman-stop:
-	@echo "🛑  Stopping podman container..."
-	-podman stop $(PROJECT_NAME) && podman rm $(PROJECT_NAME) || true
+	@$(MAKE) container-stop CONTAINER_RUNTIME=podman
 
 podman-test:
 	@echo "🔬  Testing podman endpoint..."
@@ -1165,8 +1336,7 @@ podman-test:
 	@echo "- HTTPS -> curl -k https://localhost:4444/system/test"
 
 podman-logs:
-	@echo "📜  Streaming podman logs (press Ctrl+C to exit)..."
-	@podman logs -f $(PROJECT_NAME)
+	@$(MAKE) container-logs CONTAINER_RUNTIME=podman
 
 # help: podman-stats         - Show container resource stats (if supported)
 .PHONY: podman-stats
@@ -1189,8 +1359,8 @@ podman-top:
 # help: podman-shell         - Open an interactive shell inside the Podman container
 .PHONY: podman-shell
 podman-shell:
-	@echo "🔧  Opening shell in Podman container..."
-	@podman exec -it $(PROJECT_NAME) bash || podman exec -it $(PROJECT_NAME) /bin/sh
+	@$(MAKE) container-shell CONTAINER_RUNTIME=podman
+
 
 # =============================================================================
 # 🐋 DOCKER BUILD & RUN
@@ -1208,8 +1378,9 @@ podman-shell:
 
 .PHONY: docker-dev docker docker-run docker-run-ssl docker-stop docker-test
 
-IMG_DOCKER_DEV  = $(IMG)-dev:latest
-IMG_DOCKER_PROD = $(IMG):latest
+IMG_DOCKER_DEV  = $(IMG-DEV)
+IMG_DOCKER_PROD = $(IMG)
+
 
 docker-dev:
 	@echo "🐋  Building dev Docker image..."
@@ -1228,20 +1399,26 @@ docker-prod:
 	             .
 	docker images $(IMG_PROD)
 
+docker-build:
+	@$(MAKE) container-build CONTAINER_RUNTIME=docker
+
 ## --------------------  R U N   (HTTP)  ---------------------------------------
+# docker-run:
+# 	@echo "🚀  Starting Docker container (HTTP)..."
+# 	-docker stop $(PROJECT_NAME) 2>/dev/null || true
+# 	-docker rm   $(PROJECT_NAME) 2>/dev/null || true
+# 	docker run --name $(PROJECT_NAME) \
+# 		--env-file=.env \
+# 		-p 4444:4444 \
+# 		--restart=always --memory=$(CONTAINER_MEMORY) --cpus=$(CONTAINER_CPUS) \
+# 		--health-cmd="curl --fail http://localhost:4444/health || exit 1" \
+# 		--health-interval=1m --health-retries=3 \
+# 		--health-start-period=30s --health-timeout=10s \
+# 		-d $(IMG_DOCKER_PROD)
+# 	@sleep 2 && docker logs $(PROJECT_NAME) | tail -n +1
+
 docker-run:
-	@echo "🚀  Starting Docker container (HTTP)..."
-	-docker stop $(PROJECT_NAME) 2>/dev/null || true
-	-docker rm   $(PROJECT_NAME) 2>/dev/null || true
-	docker run --name $(PROJECT_NAME) \
-		--env-file=.env \
-		-p 4444:4444 \
-		--restart=always --memory=$(CONTAINER_MEMORY) --cpus=$(CONTAINER_CPUS) \
-		--health-cmd="curl --fail http://localhost:4444/health || exit 1" \
-		--health-interval=1m --health-retries=3 \
-		--health-start-period=30s --health-timeout=10s \
-		-d $(IMG_DOCKER_PROD)
-	@sleep 2 && docker logs $(PROJECT_NAME) | tail -n +1
+	@$(MAKE) container-run CONTAINER_RUNTIME=docker
 
 ## --------------------  R U N   (HTTPS)  --------------------------------------
 docker-run-ssl: certs
@@ -1281,9 +1458,9 @@ docker-run-ssl-host: certs
 		-d $(IMG_DOCKER_PROD)
 	@sleep 2 && docker logs $(PROJECT_NAME) | tail -n +1
 
+
 docker-stop:
-	@echo "🛑  Stopping Docker container..."
-	-docker stop $(PROJECT_NAME) && docker rm $(PROJECT_NAME) || true
+	@$(MAKE) container-stop CONTAINER_RUNTIME=docker
 
 docker-test:
 	@echo "🔬  Testing Docker endpoint..."
@@ -1292,8 +1469,7 @@ docker-test:
 
 
 docker-logs:
-	@echo "📜  Streaming Docker logs (press Ctrl+C to exit)..."
-	@docker logs -f $(PROJECT_NAME)
+	@$(MAKE) container-logs CONTAINER_RUNTIME=docker
 
 # help: docker-stats         - Show container resource usage stats (non-streaming)
 .PHONY: docker-stats
@@ -1310,9 +1486,7 @@ docker-top:
 # help: docker-shell         - Open an interactive shell inside the Docker container
 .PHONY: docker-shell
 docker-shell:
-	@echo "🔧  Opening shell in Docker container..."
-	@docker exec -it $(PROJECT_NAME) bash || docker exec -it $(PROJECT_NAME) /bin/sh
-
+	@$(MAKE) container-shell CONTAINER_RUNTIME=docker
 
 # =============================================================================
 # 🛠️  COMPOSE STACK (Docker Compose v2, podman compose or podman-compose)
