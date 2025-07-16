@@ -27,6 +27,8 @@ from typing import Any, Dict, List, Union
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import httpx
+from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 # First-Party
@@ -66,6 +68,8 @@ from mcpgateway.services.tool_service import (
     ToolService,
 )
 from mcpgateway.utils.create_jwt_token import get_jwt_token
+from mcpgateway.utils.error_formatter import ErrorFormatter
+from mcpgateway.utils.retry_manager import ResilientHttpClient
 from mcpgateway.utils.verify_credentials import require_auth, require_basic_auth
 
 # Initialize services
@@ -807,6 +811,7 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
         auth_header_key=form.get("auth_header_key", ""),
         auth_header_value=form.get("auth_header_value", ""),
     )
+
     try:
         await gateway_service.register_gateway(db, gateway)
         return JSONResponse(
@@ -821,6 +826,10 @@ async def admin_add_gateway(request: Request, db: Session = Depends(get_db), use
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=400)
         if isinstance(ex, RuntimeError):
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+        if isinstance(ex, ValidationError):
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(ex))
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
 
@@ -1372,7 +1381,7 @@ async def admin_test_gateway(request: GatewayTestRequest, user: str = Depends(re
     logger.debug(f"User {user} testing server at {request.base_url}.")
     try:
         start_time = time.monotonic()
-        async with httpx.AsyncClient(timeout=settings.federation_timeout, verify=not settings.skip_ssl_verify) as client:
+        async with ResilientHttpClient(client_args={"timeout": settings.federation_timeout, "verify": not settings.skip_ssl_verify}) as client:
             response = await client.request(method=request.method.upper(), url=full_url, headers=request.headers, json=request.body)
         latency_ms = int((time.monotonic() - start_time) * 1000)
         try:

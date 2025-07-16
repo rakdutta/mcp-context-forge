@@ -30,6 +30,7 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamablehttp_client
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 try:
@@ -49,6 +50,7 @@ from mcpgateway.db import Tool as DbTool
 from mcpgateway.schemas import GatewayCreate, GatewayRead, GatewayUpdate, ToolCreate
 from mcpgateway.services.tool_service import ToolService
 from mcpgateway.utils.create_slug import slugify
+from mcpgateway.utils.retry_manager import ResilientHttpClient
 from mcpgateway.utils.services_auth import decode_auth
 
 # logging.getLogger("httpx").setLevel(logging.WARNING)  # Disables httpx logs for regular health checks
@@ -105,7 +107,7 @@ class GatewayService:
     def __init__(self) -> None:
         """Initialize the gateway service."""
         self._event_subscribers: List[asyncio.Queue] = []
-        self._http_client = httpx.AsyncClient(timeout=settings.federation_timeout, verify=not settings.skip_ssl_verify)
+        self._http_client = ResilientHttpClient(client_args={"timeout": settings.federation_timeout, "verify": not settings.skip_ssl_verify})
         self._health_check_interval = GW_HEALTH_CHECK_INTERVAL
         self._health_check_task: Optional[asyncio.Task] = None
         self._active_gateways: Set[str] = set()  # Track active gateway URLs
@@ -187,6 +189,7 @@ class GatewayService:
             GatewayConnectionError: If there was an error connecting to the gateway
             ValueError: If required values are missing
             RuntimeError: If there is an error during processing that is not covered by other exceptions
+            IntegrityError: If there is a database integrity error
             BaseException: If an unexpected error occurs
 
         Examples:
@@ -281,6 +284,11 @@ class GatewayService:
                 re: ExceptionGroup[RuntimeError]
             logger.error(f"RuntimeErrors in group: {re.exceptions}")
             raise re.exceptions[0]
+        except* IntegrityError as ie:
+            if TYPE_CHECKING:
+                ie: ExceptionGroup[IntegrityError]
+            logger.error(f"IntegrityErrors in group: {ie.exceptions}")
+            raise ie.exceptions[0]
         except* BaseException as other:  # catches every other sub-exception
             if TYPE_CHECKING:
                 other: ExceptionGroup[BaseException]

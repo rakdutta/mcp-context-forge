@@ -601,7 +601,7 @@ check-manifest:						## 📦  Verify MANIFEST.in completeness
 	@echo "📦  Verifying MANIFEST.in completeness..."
 	@$(VENV_DIR)/bin/check-manifest
 
-unimport:                           ## 📦  Unused import detection  
+unimport:                           ## 📦  Unused import detection
 	@echo "📦  unimport …" && $(VENV_DIR)/bin/unimport --check --diff mcpgateway
 
 vulture:                            ## 🧹  Dead code detection
@@ -610,10 +610,10 @@ vulture:                            ## 🧹  Dead code detection
 # -----------------------------------------------------------------------------
 # 📑 GRYPE SECURITY/VULNERABILITY SCANNING
 # -----------------------------------------------------------------------------
-# help: grype-install             - Install Grype
-# help: grype-scan                - Scan all files using grype
-# help: grype-sarif               - Generate SARIF report
-# help: security-scan             - Run Trivy security-scan
+# help: grype-install        - Install Grype
+# help: grype-scan           - Scan all files using grype
+# help: grype-sarif          - Generate SARIF report
+# help: security-scan        - Run Trivy security-scan
 .PHONY: grype-install grype-scan grype-sarif security-scan
 
 grype-install:
@@ -890,7 +890,7 @@ sonar-info:
 # 🛡️  SECURITY & PACKAGE SCANNING
 # =============================================================================
 # help: 🛡️ SECURITY & PACKAGE SCANNING
-# help: trivy-install 		 - Install Trivy
+# help: trivy-install        - Install Trivy
 # help: trivy                - Scan container image for CVEs (HIGH/CRIT). Needs podman socket enabled
 .PHONY: trivy-install trivy
 
@@ -969,15 +969,6 @@ hadolint:
 		echo "ℹ️  No Containerfile/Dockerfile found - nothing to scan."; \
 	fi
 
-
-# help: pip-audit            - Audit Python dependencies for published CVEs
-.PHONY: pip-audit
-pip-audit:
-	@echo "🔒  pip-audit vulnerability scan..."
-	@test -d "$(VENV_DIR)" || $(MAKE) venv
-	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
-		python3 -m pip install --quiet --upgrade pip-audit && \
-		pip-audit --progress-spinner ascii --strict || true"
 
 # =============================================================================
 # 📦 DEPENDENCY MANAGEMENT
@@ -2538,3 +2529,306 @@ db-history:
 
 db-revision-id:
 	@$(ALEMBIC) current --verbose | awk '/Current revision/ {print $$3}'
+
+
+# =============================================================================
+# 🎭 UI TESTING (PLAYWRIGHT)
+# =============================================================================
+# help: 🎭 UI TESTING (PLAYWRIGHT)
+# help: playwright-install   - Install Playwright browsers (chromium by default)
+# help: playwright-install-all - Install all Playwright browsers (chromium, firefox, webkit)
+# help: test-ui              - Run Playwright UI tests with visible browser
+# help: test-ui-headless     - Run Playwright UI tests in headless mode
+# help: test-ui-debug        - Run Playwright UI tests with Playwright Inspector
+# help: test-ui-smoke        - Run UI smoke tests only (fast subset)
+# help: test-ui-parallel     - Run UI tests in parallel using pytest-xdist
+# help: test-ui-report       - Run UI tests and generate HTML report
+# help: test-ui-coverage     - Run UI tests with coverage for admin endpoints
+# help: test-ui-record       - Run UI tests and record videos (headless)
+# help: test-ui-update-snapshots - Update visual regression snapshots
+# help: test-ui-clean        - Clean up Playwright test artifacts
+
+.PHONY: playwright-install playwright-install-all test-ui test-ui-headless test-ui-debug test-ui-smoke test-ui-parallel test-ui-report test-ui-coverage test-ui-record test-ui-update-snapshots test-ui-clean
+
+# Playwright test variables
+PLAYWRIGHT_DIR := tests/playwright
+PLAYWRIGHT_REPORTS := $(PLAYWRIGHT_DIR)/reports
+PLAYWRIGHT_SCREENSHOTS := $(PLAYWRIGHT_DIR)/screenshots
+PLAYWRIGHT_VIDEOS := $(PLAYWRIGHT_DIR)/videos
+
+## --- Playwright Setup -------------------------------------------------------
+playwright-install:
+	@echo "🎭 Installing Playwright browsers (chromium)..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pip install -e '.[playwright]' 2>/dev/null || pip install playwright pytest-playwright && \
+		playwright install chromium"
+	@echo "✅ Playwright chromium browser installed!"
+
+playwright-install-all:
+	@echo "🎭 Installing all Playwright browsers..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pip install -e '.[playwright]' 2>/dev/null || pip install playwright pytest-playwright && \
+		playwright install"
+	@echo "✅ All Playwright browsers installed!"
+
+## --- UI Test Execution ------------------------------------------------------
+test-ui: playwright-install
+	@echo "🎭 Running UI tests with visible browser..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_SCREENSHOTS) $(PLAYWRIGHT_REPORTS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --headed --screenshot=only-on-failure \
+		--browser chromium || { echo '❌ UI tests failed!'; exit 1; }"
+	@echo "✅ UI tests completed!"
+
+test-ui-headless: playwright-install
+	@echo "🎭 Running UI tests in headless mode..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_SCREENSHOTS) $(PLAYWRIGHT_REPORTS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --screenshot=only-on-failure \
+		--browser chromium || { echo '❌ UI tests failed!'; exit 1; }"
+	@echo "✅ UI tests completed!"
+
+test-ui-debug: playwright-install
+	@echo "🎭 Running UI tests with Playwright Inspector..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_SCREENSHOTS) $(PLAYWRIGHT_REPORTS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		PWDEBUG=1 pytest $(PLAYWRIGHT_DIR)/ -v -s --headed \
+		--browser chromium"
+
+test-ui-smoke: playwright-install
+	@echo "🎭 Running UI smoke tests..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v -m smoke --headed \
+		--browser chromium || { echo '❌ UI smoke tests failed!'; exit 1; }"
+	@echo "✅ UI smoke tests passed!"
+
+test-ui-parallel: playwright-install
+	@echo "🎭 Running UI tests in parallel..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pip install -q pytest-xdist && \
+		pytest $(PLAYWRIGHT_DIR)/ -v -n auto --dist loadscope \
+		--browser chromium || { echo '❌ UI tests failed!'; exit 1; }"
+	@echo "✅ UI parallel tests completed!"
+
+## --- UI Test Reporting ------------------------------------------------------
+test-ui-report: playwright-install
+	@echo "🎭 Running UI tests with HTML report..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_REPORTS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pip install -q pytest-html && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --screenshot=only-on-failure \
+		--html=$(PLAYWRIGHT_REPORTS)/report.html --self-contained-html \
+		--browser chromium || true"
+	@echo "✅ UI test report generated: $(PLAYWRIGHT_REPORTS)/report.html"
+	@echo "   Open with: open $(PLAYWRIGHT_REPORTS)/report.html"
+
+test-ui-coverage: playwright-install
+	@echo "🎭 Running UI tests with coverage..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_REPORTS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --cov=mcpgateway.admin \
+		--cov-report=html:$(PLAYWRIGHT_REPORTS)/coverage \
+		--cov-report=term --browser chromium || true"
+	@echo "✅ UI coverage report: $(PLAYWRIGHT_REPORTS)/coverage/index.html"
+
+test-ui-record: playwright-install
+	@echo "🎭 Running UI tests with video recording..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@mkdir -p $(PLAYWRIGHT_VIDEOS)
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --video=on \
+		--browser chromium || true"
+	@echo "✅ Test videos saved in: $(PLAYWRIGHT_VIDEOS)/"
+
+## --- UI Test Utilities ------------------------------------------------------
+test-ui-update-snapshots: playwright-install
+	@echo "🎭 Updating visual regression snapshots..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		pytest $(PLAYWRIGHT_DIR)/ -v --update-snapshots \
+		--browser chromium"
+	@echo "✅ Snapshots updated!"
+
+test-ui-clean:
+	@echo "🧹 Cleaning Playwright test artifacts..."
+	@rm -rf $(PLAYWRIGHT_SCREENSHOTS)/*.png
+	@rm -rf $(PLAYWRIGHT_VIDEOS)/*.webm
+	@rm -rf $(PLAYWRIGHT_REPORTS)/*
+	@rm -rf test-results/
+	@rm -f playwright-report-*.html test-results-*.xml
+	@echo "✅ Playwright artifacts cleaned!"
+
+## --- Combined Testing -------------------------------------------------------
+test-all: test test-ui-headless
+	@echo "✅ All tests completed (unit + UI)!"
+
+# Add UI tests to your existing test suite if needed
+test-full: coverage test-ui-report
+	@echo "📊 Full test suite completed with coverage and UI tests!"
+
+
+# =============================================================================
+# 🔒 SECURITY TOOLS
+# =============================================================================
+# help: 🔒 SECURITY TOOLS
+# help: security-all        - Run all security tools (semgrep, dodgy, gitleaks, etc.)
+# help: security-report     - Generate comprehensive security report in docs/security/
+# help: security-fix        - Auto-fix security issues where possible (pyupgrade, etc.)
+# help: semgrep             - Static analysis for security patterns
+# help: dodgy               - Check for suspicious code patterns (passwords, keys)
+# help: dlint               - Best practices linter for Python
+# help: pyupgrade           - Upgrade Python syntax to newer versions
+# help: interrogate         - Check docstring coverage
+# help: prospector          - Comprehensive Python code analysis
+# help: pip-audit           - Audit Python dependencies for published CVEs
+# help: gitleaks-install    - Install gitleaks secret scanner
+# help: gitleaks            - Scan git history for secrets
+
+# List of security tools to run with security-all
+SECURITY_TOOLS := semgrep dodgy dlint interrogate prospector pip-audit
+
+.PHONY: security-all security-report security-fix $(SECURITY_TOOLS) gitleaks-install gitleaks pyupgrade
+
+## --------------------------------------------------------------------------- ##
+##  Master security target
+## --------------------------------------------------------------------------- ##
+security-all:
+	@echo "🔒  Running full security tool suite..."
+	@set -e; for t in $(SECURITY_TOOLS); do \
+	    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"; \
+	    echo "- $$t"; \
+	    $(MAKE) $$t || true; \
+	done
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "🔍  Running gitleaks (if installed)..."
+	@command -v gitleaks >/dev/null 2>&1 && $(MAKE) gitleaks || echo "⚠️  gitleaks not installed - run 'make gitleaks-install'"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✅  Security scan complete!"
+
+## --------------------------------------------------------------------------- ##
+##  Individual security tools
+## --------------------------------------------------------------------------- ##
+semgrep:                            ## 🔍 Security patterns & anti-patterns
+	@echo "🔍  semgrep - scanning for security patterns..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q semgrep && \
+		$(VENV_DIR)/bin/semgrep --config=auto mcpgateway tests || true"
+
+dodgy:                              ## 🔐 Suspicious code patterns
+	@echo "🔐  dodgy - scanning for hardcoded secrets..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q dodgy && \
+		$(VENV_DIR)/bin/dodgy mcpgateway tests || true"
+
+dlint:                              ## 📏 Python best practices
+	@echo "📏  dlint - checking Python best practices..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q dlint && \
+		$(VENV_DIR)/bin/python -m flake8 --select=DUO mcpgateway"
+
+pyupgrade:                          ## ⬆️  Upgrade Python syntax
+	@echo "⬆️  pyupgrade - checking for syntax upgrade opportunities..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q pyupgrade && \
+		find mcpgateway tests -name '*.py' -exec $(VENV_DIR)/bin/pyupgrade --py312-plus --diff {} + || true"
+	@echo "💡  To apply changes, run: find mcpgateway tests -name '*.py' -exec $(VENV_DIR)/bin/pyupgrade --py312-plus {} +"
+
+interrogate:                        ## 📝 Docstring coverage
+	@echo "📝  interrogate - checking docstring coverage..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q interrogate && \
+		$(VENV_DIR)/bin/interrogate -vv mcpgateway || true"
+
+prospector:                         ## 🔬 Comprehensive code analysis
+	@echo "🔬  prospector - running comprehensive analysis..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q prospector[with_everything] && \
+		$(VENV_DIR)/bin/prospector mcpgateway || true"
+
+pip-audit:                          ## 🔒 Audit Python dependencies for CVEs
+	@echo "🔒  pip-audit vulnerability scan..."
+	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install --quiet --upgrade pip-audit && \
+		pip-audit --strict || true"
+
+## --------------------------------------------------------------------------- ##
+##  Gitleaks (Go binary - separate installation)
+## --------------------------------------------------------------------------- ##
+gitleaks-install:                   ## 📥 Install gitleaks secret scanner
+	@echo "📥 Installing gitleaks..."
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		brew install gitleaks; \
+	elif [ "$$(uname)" = "Linux" ]; then \
+		VERSION=$$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name"' | cut -d '"' -f 4); \
+		curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/$$VERSION/gitleaks_$${VERSION#v}_linux_x64.tar.gz | tar -xz -C /tmp; \
+		sudo mv /tmp/gitleaks /usr/local/bin/; \
+		sudo chmod +x /usr/local/bin/gitleaks; \
+	else \
+		echo "❌ Unsupported OS. Download from https://github.com/gitleaks/gitleaks/releases"; \
+		exit 1; \
+	fi
+	@echo "✅  gitleaks installed successfully!"
+
+gitleaks:                           ## 🔍 Scan for secrets in git history
+	@command -v gitleaks >/dev/null 2>&1 || { \
+		echo "❌ gitleaks not installed."; \
+		echo "💡 Install with:"; \
+		echo "   • macOS: brew install gitleaks"; \
+		echo "   • Linux: Run 'make gitleaks-install'"; \
+		echo "   • Or download from https://github.com/gitleaks/gitleaks/releases"; \
+		exit 1; \
+	}
+	@echo "🔍 Scanning for secrets with gitleaks..."
+	@gitleaks detect --source . -v || true
+	@echo "💡 To scan git history: gitleaks detect --source . --log-opts='--all'"
+
+## --------------------------------------------------------------------------- ##
+##  Security reporting and advanced targets
+## --------------------------------------------------------------------------- ##
+security-report:                    ## 📊 Generate comprehensive security report
+	@echo "📊 Generating security report..."
+	@mkdir -p $(DOCS_DIR)/docs/security
+	@echo "# Security Scan Report - $$(date)" > $(DOCS_DIR)/docs/security/report.md
+	@echo "" >> $(DOCS_DIR)/docs/security/report.md
+	@echo "## Code Security Patterns (semgrep)" >> $(DOCS_DIR)/docs/security/report.md
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q semgrep && \
+		$(VENV_DIR)/bin/semgrep --config=auto mcpgateway tests --quiet || true" >> $(DOCS_DIR)/docs/security/report.md 2>&1
+	@echo "" >> $(DOCS_DIR)/docs/security/report.md
+	@echo "## Suspicious Code Patterns (dodgy)" >> $(DOCS_DIR)/docs/security/report.md
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q dodgy && \
+		$(VENV_DIR)/bin/dodgy mcpgateway tests || true" >> $(DOCS_DIR)/docs/security/report.md 2>&1
+	@echo "✅ Security report saved to $(DOCS_DIR)/docs/security/report.md"
+
+security-fix:                       ## 🔧 Auto-fix security issues where possible
+	@echo "🔧 Attempting to auto-fix security issues..."
+	@echo "➤ Upgrading Python syntax with pyupgrade..."
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install -q pyupgrade && \
+		find mcpgateway tests -name '*.py' -exec $(VENV_DIR)/bin/pyupgrade --py312-plus {} +"
+	@echo "➤ Updating dependencies to latest secure versions..."
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
+		python3 -m pip install --upgrade pip setuptools && \
+		python3 -m pip list --outdated"
+	@echo "✅ Auto-fixes applied where possible"
+	@echo "⚠️  Manual review still required for:"
+	@echo "   - Dependency updates (run 'make update')"
+	@echo "   - Secrets in code (review dodgy/gitleaks output)"
+	@echo "   - Security patterns (review semgrep output)"

@@ -49,8 +49,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import httpx
+from pydantic import ValidationError
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -121,7 +122,9 @@ from mcpgateway.transports.streamablehttp_transport import (
     streamable_http_auth,
 )
 from mcpgateway.utils.db_isready import wait_for_db_ready
+from mcpgateway.utils.error_formatter import ErrorFormatter
 from mcpgateway.utils.redis_isready import wait_for_redis_ready
+from mcpgateway.utils.retry_manager import ResilientHttpClient
 from mcpgateway.utils.verify_credentials import require_auth, require_auth_override
 from mcpgateway.validation.jsonrpc import (
     JSONRPCError,
@@ -242,6 +245,19 @@ app = FastAPI(
     root_path=settings.app_root_path,
     lifespan=lifespan,
 )
+
+
+# Global exceptions handlers
+
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    return JSONResponse(status_code=422, content=ErrorFormatter.format_validation_error(exc))
+
+
+@app.exception_handler(IntegrityError)
+async def database_exception_handler(request: Request, exc: IntegrityError):
+    return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(exc))
 
 
 class DocsAuthMiddleware(BaseHTTPMiddleware):
@@ -419,9 +435,7 @@ async def invalidate_resource_cache(uri: Optional[str] = None) -> None:
         resource_cache.clear()
 
 
-#################
 # Protocol APIs #
-#################
 @protocol_router.post("/initialize")
 async def initialize(request: Request, user: str = Depends(require_auth)) -> InitializeResult:
     """
@@ -1827,7 +1841,8 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             try:
                 data = await websocket.receive_text()
-                async with httpx.AsyncClient(timeout=settings.federation_timeout, verify=not settings.skip_ssl_verify) as client:
+                client_args = {"timeout": settings.federation_timeout, "verify": not settings.skip_ssl_verify}
+                async with ResilientHttpClient(client_args=client_args) as client:
                     response = await client.post(
                         f"http://localhost:{settings.port}/rpc",
                         json=json.loads(data),
