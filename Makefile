@@ -1056,7 +1056,7 @@ endif
 ifdef CI
   # Many CI systems have docker command that's actually podman
   CONTAINER_RUNTIME := $(shell $(CONTAINER_RUNTIME) --version | grep -q podman && echo podman || echo docker)
-endif	
+endif
 
 
 # =============================================================================
