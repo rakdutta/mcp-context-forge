@@ -208,9 +208,8 @@ class ServerService:
             ServerRead: The newly created server, with associated item IDs.
 
         Raises:
-            ServerNameConflictError: If a server with the same name already exists.
-            ServerError: If any associated tool, resource, or prompt does not exist, or if any other
-                        registration error occurs.
+            IntegrityError: If a database integrity error occurs.
+            ServerError: If any associated tool, resource, or prompt does not exist, or if any other registration error occurs.
 
         Examples:
             >>> from mcpgateway.services.server_service import ServerService

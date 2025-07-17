@@ -154,7 +154,7 @@ class ResourceService:
             Created resource information
 
         Raises:
-            ResourceURIConflictError: If resource URI already exists
+            IntegrityError: If a database integrity error occurs.
             ResourceError: For other resource registration errors
 
         Examples:

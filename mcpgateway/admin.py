@@ -2664,6 +2664,7 @@ async def admin_add_resource(request: Request, db: Session = Depends(get_db), us
         logger.error(f"Error in admin_add_resource: {ex}")
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
+
 @admin_router.post("/resources/{uri:path}/edit")
 async def admin_edit_resource(
     uri: str,
