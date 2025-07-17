@@ -254,6 +254,7 @@ class TestResourceRegistration:
 
         # Patch resource_service.register_resource to wrap IntegrityError in ResourceError
         original_register_resource = resource_service.register_resource
+
         async def wrapped_register_resource(db, resource):
             try:
                 # Simulate IntegrityError on commit

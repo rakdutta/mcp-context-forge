@@ -230,10 +230,7 @@ class TestServerService:
 
         # Accept either direct or wrapped error message
         msg = str(exc.value)
-        assert (
-            "Server already exists with name" in msg
-            or "Failed to register server" in msg
-        )
+        assert "Server already exists with name" in msg or "Failed to register server" in msg
 
     @pytest.mark.asyncio
     async def test_register_server_invalid_associated_tool(self, server_service, test_db):

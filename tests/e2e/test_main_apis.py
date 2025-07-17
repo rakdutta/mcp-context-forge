@@ -641,6 +641,7 @@ class TestResourceAPIs:
             assert "already exists" in resp_json["detail"]
         elif "message" in resp_json:
             assert "already exists" in resp_json["message"]
+
     """Test resource management endpoints."""
 
     async def test_list_resources_empty(self, client: AsyncClient, mock_auth):
