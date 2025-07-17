@@ -973,11 +973,11 @@ async def admin_add_resource(request: Request, db: Session = Depends(get_db), us
             logger.error(f"ValidationError in admin_add_resource: {ErrorFormatter.format_validation_error(ex)}")
             return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
         if isinstance(ex, IntegrityError):
-            error_message=ErrorFormatter.format_database_error(ex)
+            error_message = ErrorFormatter.format_database_error(ex)
             logger.error(f"IntegrityError in admin_add_resource: {error_message}")
             return JSONResponse(status_code=409, content=error_message)
         logger.error(f"Error in admin_add_resource: {ex}")
-        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500) 
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
 
 @admin_router.post("/resources/{uri:path}/edit")

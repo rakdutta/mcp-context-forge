@@ -47,7 +47,7 @@ class ErrorFormatter:
 
         # Log the full error for debugging
         logger.debug(f"Validation error: {error}")
-        
+
         return {"message": "Validation failed", "details": errors, "success": False}
 
     @staticmethod
@@ -105,7 +105,7 @@ class ErrorFormatter:
                 elif "resources.uri" in error_str:
                     return {"message": "A resource with this URI already exists", "success": False}
                 elif "servers.name" in error_str:
-                    return {"message": "A server with this name already exists", "success": False}    
+                    return {"message": "A server with this name already exists", "success": False}
             elif "FOREIGN KEY constraint failed" in error_str:
                 return {"message": "Referenced item not found", "success": False}
             elif "NOT NULL constraint failed" in error_str:

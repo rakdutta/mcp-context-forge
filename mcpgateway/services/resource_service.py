@@ -176,7 +176,7 @@ class ResourceService:
             'resource_read'
         """
         try:
-           
+
             # Detect mime type if not provided
             mime_type = resource.mime_type
             if not mime_type:
