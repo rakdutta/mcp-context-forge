@@ -176,16 +176,7 @@ class ResourceService:
             'resource_read'
         """
         try:
-            # Check for URI conflicts (both active and inactive)
-            existing_resource = db.execute(select(DbResource).where(DbResource.uri == resource.uri)).scalar_one_or_none()
-
-            if existing_resource:
-                raise ResourceURIConflictError(
-                    resource.uri,
-                    is_active=existing_resource.is_active,
-                    resource_id=existing_resource.id,
-                )
-
+           
             # Detect mime type if not provided
             mime_type = resource.mime_type
             if not mime_type:
@@ -216,10 +207,9 @@ class ResourceService:
 
             logger.info(f"Registered resource: {resource.uri}")
             return self._convert_resource_to_read(db_resource)
-
-        except IntegrityError:
-            db.rollback()
-            raise ResourceError(f"Resource already exists: {resource.uri}")
+        except IntegrityError as ie:
+            logger.error(f"IntegrityErrors in group: {ie}")
+            raise ie
         except Exception as e:
             db.rollback()
             raise ResourceError(f"Failed to register resource: {str(e)}")

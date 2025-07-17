@@ -16,7 +16,7 @@ It also publishes event notifications for server changes.
 import asyncio
 from datetime import datetime, timezone
 import logging
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional,TYPE_CHECKING
 
 # Third-Party
 import httpx
@@ -184,12 +184,7 @@ class ServerService:
             'server_read'
         """
         try:
-            # Check for an existing server with the same name.
-            existing = db.execute(select(DbServer).where(DbServer.name == server_in.name)).scalar_one_or_none()
-            if existing:
-                raise ServerNameConflictError(server_in.name, is_active=existing.is_active, server_id=existing.id)
-
-            # Create the new server record.
+            # # Create the new server record.
             db_server = DbServer(
                 name=server_in.name,
                 description=server_in.description,
@@ -251,12 +246,13 @@ class ServerService:
             await self._notify_server_added(db_server)
             logger.info(f"Registered server: {server_in.name}")
             return self._convert_server_to_read(db_server)
-        except IntegrityError:
+        except IntegrityError as ie:
             db.rollback()
-            raise ServerError(f"Server already exists: {server_in.name}")
-        except Exception as e:
+            logger.error(f"IntegrityErrors in group: {ie}")
+            raise ie
+        except Exception as ex:
             db.rollback()
-            raise ServerError(f"Failed to register server: {str(e)}")
+            raise ServerError(f"Failed to register server: {str(ex)}")
 
     async def list_servers(self, db: Session, include_inactive: bool = False) -> List[ServerRead]:
         """List all registered servers.

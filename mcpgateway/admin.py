@@ -180,9 +180,14 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
         if is_inactive_checked.lower() == "true":
             return RedirectResponse(f"{root_path}/admin/?include_inactive=true#catalog", status_code=303)
         return RedirectResponse(f"{root_path}/admin#catalog", status_code=303)
-    except Exception as e:
-        logger.error(f"Error adding server: {e}")
-
+    except Exception as ex:
+        if isinstance(ex, ValidationError):
+            logger.info(f"ValidationError adding server: type{ex}")
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            logger.info(f"IntegrityError adding server: type{ex}")
+            return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(ex))
+        logger.info(f"Other Error adding server:{ex}")
         root_path = request.scope.get("root_path", "")
         if is_inactive_checked.lower() == "true":
             return RedirectResponse(f"{root_path}/admin/?include_inactive=true#catalog", status_code=303)
@@ -950,18 +955,29 @@ async def admin_add_resource(request: Request, db: Session = Depends(get_db), us
     """
     logger.debug(f"User {user} is adding a new resource")
     form = await request.form()
-    resource = ResourceCreate(
-        uri=form["uri"],
-        name=form["name"],
-        description=form.get("description"),
-        mime_type=form.get("mimeType"),
-        template=form.get("template"),  # defaults to None if not provided
-        content=form["content"],
-    )
-    await resource_service.register_resource(db, resource)
+    try:
+        resource = ResourceCreate(
+            uri=form["uri"],
+            name=form["name"],
+            description=form.get("description"),
+            mime_type=form.get("mimeType"),
+            template=form.get("template"),  # defaults to None if not provided
+            content=form["content"],
+        )
+        await resource_service.register_resource(db, resource)
 
-    root_path = request.scope.get("root_path", "")
-    return RedirectResponse(f"{root_path}/admin#resources", status_code=303)
+        root_path = request.scope.get("root_path", "")
+        return RedirectResponse(f"{root_path}/admin#resources", status_code=303)
+    except Exception as ex:
+        if isinstance(ex, ValidationError):
+            logger.error(f"ValidationError in admin_add_resource: {ErrorFormatter.format_validation_error(ex)}")
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            error_message=ErrorFormatter.format_database_error(ex)
+            logger.error(f"IntegrityError in admin_add_resource: {error_message}")
+            return JSONResponse(status_code=409, content=error_message)
+        logger.error(f"Error in admin_add_resource: {ex}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500) 
 
 
 @admin_router.post("/resources/{uri:path}/edit")

@@ -47,8 +47,7 @@ class ErrorFormatter:
 
         # Log the full error for debugging
         logger.debug(f"Validation error: {error}")
-        print(type(error))
-
+        
         return {"message": "Validation failed", "details": errors, "success": False}
 
     @staticmethod
@@ -105,12 +104,14 @@ class ErrorFormatter:
                     return {"message": "A tool with this name already exists", "success": False}
                 elif "resources.uri" in error_str:
                     return {"message": "A resource with this URI already exists", "success": False}
+                elif "servers.name" in error_str:
+                    return {"message": "A server with this name already exists", "success": False}    
             elif "FOREIGN KEY constraint failed" in error_str:
                 return {"message": "Referenced item not found", "success": False}
             elif "NOT NULL constraint failed" in error_str:
                 return {"message": "Required field is missing", "success": False}
             elif "CHECK constraint failed:" in error_str:
-                return {"message": "Gateway validation failed. Please check the input data.", "success": False}
+                return {"message": "Validation failed. Please check the input data.", "success": False}
 
         # Generic database error
         return {"message": "Unable to complete the operation. Please try again.", "success": False}
