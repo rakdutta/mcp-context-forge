@@ -1192,6 +1192,26 @@ container-run: container-check-image
 	@echo "🔍 Health check status:"
 	@$(CONTAINER_RUNTIME) inspect $(PROJECT_NAME) --format='{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
 
+container-run-host: container-check-image
+	@echo "🚀 Running with $(CONTAINER_RUNTIME)..."
+	-$(CONTAINER_RUNTIME) stop $(PROJECT_NAME) 2>/dev/null || true
+	-$(CONTAINER_RUNTIME) rm $(PROJECT_NAME) 2>/dev/null || true
+	$(CONTAINER_RUNTIME) run --name $(PROJECT_NAME) \
+		--env-file=.env \
+		--network=host \
+		-p 4444:4444 \
+		--restart=always \
+		--memory=$(CONTAINER_MEMORY) --cpus=$(CONTAINER_CPUS) \
+		--health-cmd="curl --fail http://localhost:4444/health || exit 1" \
+		--health-interval=1m --health-retries=3 \
+		--health-start-period=30s --health-timeout=10s \
+		-d $(call get_image_name)
+	@sleep 2
+	@echo "✅ Container started"
+	@echo "🔍 Health check status:"
+	@$(CONTAINER_RUNTIME) inspect $(PROJECT_NAME) --format='{{.State.Health.Status}}' 2>/dev/null || echo "No health check configured"
+
+
 container-run-ssl: certs container-check-image
 	@echo "🚀 Running with $(CONTAINER_RUNTIME) (TLS)..."
 	-$(CONTAINER_RUNTIME) stop $(PROJECT_NAME) 2>/dev/null || true
@@ -1231,6 +1251,9 @@ container-run-ssl-host: certs container-check-image
 		-d $(call get_image_name)
 	@sleep 2
 	@echo "✅ Container started with TLS (host networking)"
+
+
+	
 
 container-push: container-check-image
 	@echo "📤 Preparing to push image..."
