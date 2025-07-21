@@ -1685,16 +1685,20 @@ async def admin_add_tool(
             content={"message": "Tool registered successfully!", "success": True},
             status_code=200,
         )
-    except ToolNameConflictError as e:
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=400)
-    except ToolError as e:
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=500)
-    except ValidationError as e:  # This block should catch ValidationError
-        logger.error(f"ValidationError in admin_edit_tool: {str(e)}")
-        return JSONResponse(content=ErrorFormatter.format_validation_error(e), status_code=422)
-    except Exception as e:
-        logger.error(f"Unexpected error in admin_edit_tool: {str(e)}")
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=500)
+    # except ToolNameConflictError as e:
+    #     return JSONResponse(content={"message": str(e), "success": False}, status_code=400)
+    except IntegrityError as ex:
+        error_message = ErrorFormatter.format_database_error(ex)
+        logger.error(f"IntegrityError in admin_add_resource: {error_message}")
+        return JSONResponse(status_code=409, content=error_message)
+    except ToolError as ex:
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+    except ValidationError as ex:  # This block should catch ValidationError
+        logger.error(f"ValidationError in admin_add_tool: {str(ex)}")
+        return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+    except Exception as ex:
+        logger.error(f"Unexpected error in admin_add_tool: {str(ex)}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
 
 @admin_router.post("/tools/{tool_id}/edit/", response_model=None)
@@ -1848,18 +1852,19 @@ async def admin_edit_tool(
         if is_inactive_checked.lower() == "true":
             return RedirectResponse(f"{root_path}/admin/?include_inactive=true#tools", status_code=303)
         return RedirectResponse(f"{root_path}/admin#tools", status_code=303)
-    except ToolNameConflictError as e:
-        logger.error(f"ToolNameConflictError in admin_edit_tool: {str(e)}")
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=400)
-    except ToolError as e:
-        logger.error(f"ToolError in admin_edit_tool: {str(e)}")
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=500)
-    except ValidationError as e:  # Catch Pydantic validation errors
-        logger.error(f"ValidationError in admin_edit_tool: {str(e)}")
-        return JSONResponse(content=ErrorFormatter.format_validation_error(e), status_code=422)
-    except Exception as e:  # Generic catch-all for unexpected errors
-        logger.error(f"Unexpected error in admin_edit_tool: {str(e)}")
-        return JSONResponse(content={"message": str(e), "success": False}, status_code=500)
+    except IntegrityError as ex:
+        error_message = ErrorFormatter.format_database_error(ex)
+        logger.error(f"IntegrityError in admin_edit_resource: {error_message}")
+        return JSONResponse(status_code=409, content=error_message)
+    except ToolError as ex:
+        logger.error(f"ToolError in admin_edit_tool: {str(ex)}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+    except ValidationError as ex:  # Catch Pydantic validation errors
+        logger.error(f"ValidationError in admin_edit_tool: {str(ex)}")
+        return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+    except Exception as ex:  # Generic catch-all for unexpected errors
+        logger.error(f"Unexpected error in admin_edit_tool: {str(ex)}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
 
 @admin_router.post("/tools/{tool_id}/delete")
