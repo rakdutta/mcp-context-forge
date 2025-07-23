@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """RPC method validation test
 
 Copyright 2025
@@ -16,6 +17,8 @@ Usage:
 import json
 import os
 import sys
+
+# Third-Party
 import pytest
 
 try:
@@ -24,6 +27,7 @@ try:
 except ImportError:
     print("Please install requests: pip install requests")
     sys.exit(1)
+
 
 @pytest.mark.skip(reason="Disabled temporarily as this requires a live MCP Gateway instance")
 def test_rpc_vulnerability():

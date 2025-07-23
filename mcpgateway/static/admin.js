@@ -3234,8 +3234,14 @@ async function testTool(toolId) {
             titleElement.textContent = "Test Tool: " + (tool.name || "Unknown");
         }
         if (descElement) {
-            descElement.textContent =
-                tool.description || "No description available.";
+            if (tool.description) {
+                descElement.innerHTML = tool.description.replace(
+                    /\n/g,
+                    "<br/>",
+                );
+            } else {
+                descElement.textContent = "No description available.";
+            }
         }
 
         const container = safeGetElement("tool-test-form-fields");
@@ -4183,48 +4189,133 @@ async function handleGatewayFormSubmit(e) {
     }
 }
 
-function handleResourceFormSubmit(e) {
+async function handleResourceFormSubmit(e) {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
+    const status = safeGetElement("status-resources");
+    const loading = safeGetElement("add-gateway-loading");
+    try {
+        // Validate inputs
+        const name = formData.get("name");
+        const uri = formData.get("uri");
+        const nameValidation = validateInputName(name, "resource");
+        const uriValidation = validateInputName(uri, "resource URI");
 
-    // Validate inputs
-    const name = formData.get("name");
-    const uri = formData.get("uri");
+        if (!nameValidation.valid) {
+            showErrorMessage(nameValidation.error);
+            return;
+        }
 
-    const nameValidation = validateInputName(name, "resource");
-    const uriValidation = validateInputName(uri, "resource URI");
+        if (!uriValidation.valid) {
+            showErrorMessage(uriValidation.error);
+            return;
+        }
 
-    if (!nameValidation.valid) {
-        showErrorMessage(nameValidation.error);
-        return;
+        if (loading) {
+            loading.style.display = "block";
+        }
+        if (status) {
+            status.textContent = "";
+            status.classList.remove("error-status");
+        }
+
+        const isInactiveCheckedBool = isInactiveChecked("resources");
+        formData.append("is_inactive_checked", isInactiveCheckedBool);
+
+        const response = await fetchWithTimeout(
+            `${window.ROOT_PATH}/admin/resources`,
+            {
+                method: "POST",
+                body: formData,
+            },
+        );
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || "An error occurred");
+        } else {
+            const redirectUrl = isInactiveCheckedBool
+                ? `${window.ROOT_PATH}/admin?include_inactive=true#resources`
+                : `${window.ROOT_PATH}/admin#resources`;
+            window.location.href = redirectUrl;
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        if (status) {
+            status.textContent = error.message || "An error occurred!";
+            status.classList.add("error-status");
+        }
+        showErrorMessage(error.message);
+    } finally {
+        // location.reload();
+        if (loading) {
+            loading.style.display = "none";
+        }
     }
+}
 
-    if (!uriValidation.valid) {
-        showErrorMessage(uriValidation.error);
-        return;
+async function handleServerFormSubmit(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const status = safeGetElement("serverFormError");
+    const loading = safeGetElement("add-server-loading"); // Add a loading spinner if needed
+
+    try {
+        const name = formData.get("name");
+
+        // Basic validation
+        const nameValidation = validateInputName(name, "server");
+        if (!nameValidation.valid) {
+            throw new Error(nameValidation.error);
+        }
+
+        if (loading) {
+            loading.style.display = "block";
+        }
+
+        if (status) {
+            status.textContent = "";
+            status.classList.remove("error-status");
+        }
+
+        const isInactiveCheckedBool = isInactiveChecked("servers");
+        formData.append("is_inactive_checked", isInactiveCheckedBool);
+
+        const response = await fetchWithTimeout(
+            `${window.ROOT_PATH}/admin/servers`,
+            {
+                method: "POST",
+                body: formData,
+                redirect: "manual",
+            },
+        );
+
+        const result = await response.json();
+        if (!result.success) {
+            console.log(result.message);
+            throw new Error(result.message || "Failed to add server.");
+        } else {
+            // Success redirect
+            const redirectUrl = isInactiveCheckedBool
+                ? `${window.ROOT_PATH}/admin?include_inactive=true#catalog`
+                : `${window.ROOT_PATH}/admin#catalog`;
+            window.location.href = redirectUrl;
+        }
+    } catch (error) {
+        console.error("Add Server Error:", error);
+        if (status) {
+            status.textContent = error.message || "An error occurred.";
+            status.classList.add("error-status");
+        }
+        showErrorMessage(error.message); // Optional if you use global popup/snackbar
+    } finally {
+        if (loading) {
+            loading.style.display = "none";
+        }
     }
-
-    fetchWithTimeout(`${window.ROOT_PATH}/admin/resources`, {
-        method: "POST",
-        body: formData,
-    })
-        .then((response) => {
-            if (!response.ok) {
-                const status = safeGetElement("status-resources");
-                if (status) {
-                    status.textContent = "Connection failed!";
-                    status.classList.add("error-status");
-                }
-                throw new Error("Network response was not ok");
-            } else {
-                location.reload();
-            }
-        })
-        .catch((error) => {
-            console.error("Error:", error);
-            showErrorMessage("Failed to create resource");
-        });
 }
 
 async function handleToolFormSubmit(event) {
@@ -4819,6 +4910,11 @@ function setupFormHandlers() {
     const paramButton = safeGetElement("add-parameter-btn");
     if (paramButton) {
         paramButton.addEventListener("click", handleAddParameter);
+    }
+
+    const serverForm = safeGetElement("add-server-form");
+    if (serverForm) {
+        serverForm.addEventListener("submit", handleServerFormSubmit);
     }
 
     const editResourceForm = safeGetElement("edit-resource-form");

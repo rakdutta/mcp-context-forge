@@ -52,9 +52,7 @@ class SecurityValidator:
     """Configurable validation with MCP-compliant limits"""
 
     # Configurable patterns (from settings)
-    DANGEROUS_HTML_PATTERN = (
-        settings.validation_dangerous_html_pattern
-    )  # Default: '<(script|iframe|object|embed|link|meta|base|form|img|svg|video|audio|source|track|area|map|canvas|applet|frame|frameset|html|head|body|style)\b|</*(script|iframe|object|embed|link|meta|base|form|img|svg|video|audio|source|track|area|map|canvas|applet|frame|frameset|html|head|body|style)>'
+    DANGEROUS_HTML_PATTERN = settings.validation_dangerous_html_pattern  # Default: '<(script|iframe|object|embed|link|meta|base|form|img|svg|video|audio|source|track|area|map|canvas|applet|frame|frameset|html|head|body|style)\b|</*(script|iframe|object|embed|link|meta|base|form|img|svg|video|audio|source|track|area|map|canvas|applet|frame|frameset|html|head|body|style)>'
     DANGEROUS_JS_PATTERN = settings.validation_dangerous_js_pattern  # Default: javascript:|vbscript:|on\w+\s*=|data:.*script
     ALLOWED_URL_SCHEMES = settings.validation_allowed_url_schemes  # Default: ["http://", "https://", "ws://", "wss://"]
 
@@ -419,6 +417,24 @@ class SecurityValidator:
             raise ValueError(f"{field_name} is not a valid URL")
 
         return value
+
+    @classmethod
+    def validate_no_xss(cls, value: str, field_name: str) -> None:
+        """
+        Validate that a string does not contain XSS patterns.
+
+        Args:
+            value (str): Value to validate.
+            field_name (str): Name of the field being validated.
+
+        Raises:
+            ValueError: If the value contains XSS patterns.
+        """
+        if not value:
+            return  # Empty values are considered safe
+        # Check for dangerous HTML tags
+        if re.search(cls.DANGEROUS_HTML_PATTERN, value, re.IGNORECASE):
+            raise ValueError(f"{field_name} contains HTML tags that may cause security issues")
 
     @classmethod
     def validate_json_depth(

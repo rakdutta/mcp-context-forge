@@ -22,6 +22,7 @@ gateway-specific extensions for federation support.
 # Standard
 import base64
 from datetime import datetime, timezone
+from enum import Enum
 import json
 import logging
 import re
@@ -1433,6 +1434,34 @@ class PromptCreate(BaseModel):
         return v
 
 
+class PromptExecuteArgs(BaseModel):
+    """
+    Schema for args executing a prompt
+
+    Attributes:
+        args (Dict[str, str]): Arguments for prompt execution.
+    """
+
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    args: Dict[str, str] = Field(default_factory=dict, description="Arguments for prompt execution")
+
+    @field_validator("args")
+    @classmethod
+    def validate_args(cls, v: dict) -> dict:
+        """Ensure prompt arguments pass XSS validation
+
+        Args:
+            v (dict): Value to validate
+
+        Returns:
+            dict: Value if validated as safe
+        """
+        for val in v.values():
+            SecurityValidator.validate_no_xss(val, "Prompt execution arguments")
+        return v
+
+
 class PromptUpdate(BaseModelWithConfigDict):
     """Schema for updating an existing prompt.
 
@@ -1539,6 +1568,14 @@ class PromptInvocation(BaseModelWithConfigDict):
 
 
 # --- Gateway Schemas ---
+
+
+# --- Transport Type ---
+class TransportType(str, Enum):
+    SSE = "SSE"
+    HTTP = "HTTP"
+    STDIO = "STDIO"
+    STREAMABLEHTTP = "STREAMABLEHTTP"
 
 
 class GatewayCreate(BaseModel):
@@ -1649,6 +1686,13 @@ class GatewayCreate(BaseModel):
         auth_value = cls._process_auth_fields(info)
 
         return auth_value
+
+    @field_validator("transport")
+    @classmethod
+    def validate_transport(cls, v: str) -> str:
+        if v not in [t.value for t in TransportType]:
+            raise ValueError(f"Invalid transport type: {v}. Must be one of: {', '.join([t.value for t in TransportType])}")
+        return v
 
     @staticmethod
     def _process_auth_fields(info: ValidationInfo) -> Optional[Dict[str, Any]]:
