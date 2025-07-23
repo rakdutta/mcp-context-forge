@@ -219,7 +219,6 @@ class PromptService:
             ...     pass
         """
         try:
-            
             # Validate template syntax
             self._validate_template(prompt.template)
 
@@ -475,7 +474,7 @@ class PromptService:
 
             await self._notify_prompt_updated(prompt)
             return PromptRead.model_validate(self._convert_db_prompt(prompt))
-        
+
         except IntegrityError as ie:
             logger.error(f"IntegrityErrors in group: {ie}")
             raise ie

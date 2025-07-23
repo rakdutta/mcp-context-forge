@@ -435,6 +435,7 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
     except CoreValidationError as ex:
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=422)
     except Exception as ex:
+        logger.info(f"error,{ex}")
         if isinstance(ex, ServerError):
             # Custom server logic error — 500 Internal Server Error makes sense
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
@@ -446,15 +447,10 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
         if isinstance(ex, RuntimeError):
             # Unexpected error during runtime — 500 is suitable
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
-
         if isinstance(ex, ValidationError):
-            # Pydantic or input validation failure — 422 Unprocessable Entity is correct
-            return JSONResponse(content={"message": ErrorFormatter.format_validation_error(ex), "success": False}, status_code=422)
-
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
         if isinstance(ex, IntegrityError):
-            # DB constraint violation — 409 Conflict is appropriate
-            return JSONResponse(content={"message": ErrorFormatter.format_database_error(ex), "success": False}, status_code=409)
-
+            return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(ex))
         # For any other unhandled error, default to 500
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
@@ -3116,20 +3112,20 @@ async def admin_add_prompt(request: Request, db: Session = Depends(get_db), user
     """
     logger.debug(f"User {user} is adding a new prompt")
     form = await request.form()
-    args_json = form.get("arguments") or "[]"
-    arguments = json.loads(args_json)
-    prompt = PromptCreate(
-        name=form["name"],
-        description=form.get("description"),
-        template=form["template"],
-        arguments=arguments,
-    )
-    await prompt_service.register_prompt(db, prompt)
-    return JSONResponse(
+    try:
+        args_json = form.get("arguments") or "[]"
+        arguments = json.loads(args_json)
+        prompt = PromptCreate(
+            name=form["name"],
+            description=form.get("description"),
+            template=form["template"],
+            arguments=arguments,
+        )
+        await prompt_service.register_prompt(db, prompt)
+        return JSONResponse(
             content={"message": "Prompt registered successfully!", "success": True},
             status_code=200,
         )
-    
     except Exception as ex:
         if isinstance(ex, ValidationError):
             logger.error(f"ValidationError in admin_add_prompt: {ErrorFormatter.format_validation_error(ex)}")
@@ -3140,7 +3136,6 @@ async def admin_add_prompt(request: Request, db: Session = Depends(get_db), user
             return JSONResponse(status_code=409, content=error_message)
         logger.error(f"Error in admin_add_prompt: {ex}")
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
-
 
 
 @admin_router.post("/prompts/{name}/edit")
@@ -3219,21 +3214,22 @@ async def admin_edit_prompt(
     form = await request.form()
     args_json = form.get("arguments") or "[]"
     arguments = json.loads(args_json)
-    prompt = PromptUpdate(
-        name=form["name"],
-        description=form.get("description"),
-        template=form["template"],
-        arguments=arguments,
-    )
-    await prompt_service.update_prompt(db, name, prompt)
+    try:
+        prompt = PromptUpdate(
+            name=form["name"],
+            description=form.get("description"),
+            template=form["template"],
+            arguments=arguments,
+        )
+        await prompt_service.update_prompt(db, name, prompt)
 
-    root_path = request.scope.get("root_path", "")
-    is_inactive_checked = form.get("is_inactive_checked", "false")
+        root_path = request.scope.get("root_path", "")
+        is_inactive_checked = form.get("is_inactive_checked", "false")
 
-    if is_inactive_checked.lower() == "true":
-        return RedirectResponse(f"{root_path}/admin/?include_inactive=true#prompts", status_code=303)
-    #return RedirectResponse(f"{root_path}/admin#prompts", status_code=303)
-    return JSONResponse(
+        if is_inactive_checked.lower() == "true":
+            return RedirectResponse(f"{root_path}/admin/?include_inactive=true#prompts", status_code=303)
+        # return RedirectResponse(f"{root_path}/admin#prompts", status_code=303)
+        return JSONResponse(
             content={"message": "Prompt update successfully!", "success": True},
             status_code=200,
         )
@@ -3247,7 +3243,6 @@ async def admin_edit_prompt(
             return JSONResponse(status_code=409, content=error_message)
         logger.error(f"Error in admin_add_prompt: {ex}")
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
-
 
 
 @admin_router.post("/prompts/{name}/delete")
