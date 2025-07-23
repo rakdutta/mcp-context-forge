@@ -434,13 +434,6 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
 
     except CoreValidationError as ex:
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=422)
-
-    except ValidationError as ex:
-        return JSONResponse(content={"message": str(ex), "success": False}, status_code=422)
-
-    except IntegrityError as ex:
-        logger.error(f"Database error: {ex}")
-        return JSONResponse(content={"message": f"Server already exists with name: {server.name}", "success": False}, status_code=409)
     except Exception as ex:
         if isinstance(ex, ServerError):
             # Custom server logic error — 500 Internal Server Error makes sense
@@ -3132,9 +3125,22 @@ async def admin_add_prompt(request: Request, db: Session = Depends(get_db), user
         arguments=arguments,
     )
     await prompt_service.register_prompt(db, prompt)
+    return JSONResponse(
+            content={"message": "Prompt registered successfully!", "success": True},
+            status_code=200,
+        )
+    
+    except Exception as ex:
+        if isinstance(ex, ValidationError):
+            logger.error(f"ValidationError in admin_add_prompt: {ErrorFormatter.format_validation_error(ex)}")
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            error_message = ErrorFormatter.format_database_error(ex)
+            logger.error(f"IntegrityError in admin_add_prompt: {error_message}")
+            return JSONResponse(status_code=409, content=error_message)
+        logger.error(f"Error in admin_add_prompt: {ex}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
-    root_path = request.scope.get("root_path", "")
-    return RedirectResponse(f"{root_path}/admin#prompts", status_code=303)
 
 
 @admin_router.post("/prompts/{name}/edit")
@@ -3226,7 +3232,22 @@ async def admin_edit_prompt(
 
     if is_inactive_checked.lower() == "true":
         return RedirectResponse(f"{root_path}/admin/?include_inactive=true#prompts", status_code=303)
-    return RedirectResponse(f"{root_path}/admin#prompts", status_code=303)
+    #return RedirectResponse(f"{root_path}/admin#prompts", status_code=303)
+    return JSONResponse(
+            content={"message": "Prompt update successfully!", "success": True},
+            status_code=200,
+        )
+    except Exception as ex:
+        if isinstance(ex, ValidationError):
+            logger.error(f"ValidationError in admin_add_prompt: {ErrorFormatter.format_validation_error(ex)}")
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            error_message = ErrorFormatter.format_database_error(ex)
+            logger.error(f"IntegrityError in admin_add_prompt: {error_message}")
+            return JSONResponse(status_code=409, content=error_message)
+        logger.error(f"Error in admin_add_prompt: {ex}")
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+
 
 
 @admin_router.post("/prompts/{name}/delete")
