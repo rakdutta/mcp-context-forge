@@ -1812,7 +1812,7 @@ async def admin_edit_tool(
 
         >>> async def test_admin_edit_tool_success():
         ...     response = await admin_edit_tool(tool_id, mock_request_success, mock_db, mock_user)
-        ...     return isinstance(response, RedirectResponse) and response.status_code == 303 and "/admin#tools" in response.headers["location"]
+        ...     return isinstance(response, JSONResponse) and response.status_code == 200 and json.loads(response.body.decode())["success"] is True
 
         >>> asyncio.run(test_admin_edit_tool_success())
         True
@@ -1830,7 +1830,7 @@ async def admin_edit_tool(
 
         >>> async def test_admin_edit_tool_inactive_checked():
         ...     response = await admin_edit_tool(tool_id, mock_request_inactive, mock_db, mock_user)
-        ...     return isinstance(response, RedirectResponse) and response.status_code == 303 and "/api/admin/?include_inactive=true#tools" in response.headers["location"]
+        ...     return isinstance(response, JSONResponse) and response.status_code == 200 and json.loads(response.body.decode())["success"] is True
 
         >>> asyncio.run(test_admin_edit_tool_inactive_checked())
         True
@@ -1933,11 +1933,11 @@ async def admin_edit_tool(
         tool = ToolUpdate(**tool_data)  # Pydantic validation happens here
         await tool_service.update_tool(db, tool_id, tool)
 
-        root_path = request.scope.get("root_path", "")
-        is_inactive_checked = form.get("is_inactive_checked", "false")
-        if is_inactive_checked.lower() == "true":
-            return RedirectResponse(f"{root_path}/admin/?include_inactive=true#tools", status_code=303)
-        return RedirectResponse(f"{root_path}/admin#tools", status_code=303)
+        # root_path = request.scope.get("root_path", "")
+        # is_inactive_checked = form.get("is_inactive_checked", "false")
+        # if is_inactive_checked.lower() == "true":
+        #     return RedirectResponse(f"{root_path}/admin/?include_inactive=true#tools", status_code=303)
+        return JSONResponse(content={"message": "Edit tool succcessfully", "success": True}, status_code=200)
     except IntegrityError as ex:
         error_message = ErrorFormatter.format_database_error(ex)
         logger.error(f"IntegrityError in admin_edit_resource: {error_message}")
