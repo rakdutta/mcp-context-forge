@@ -3104,10 +3104,11 @@ async def admin_add_prompt(request: Request, db: Session = Depends(get_db), user
         >>>
         >>> async def test_admin_add_prompt():
         ...     response = await admin_add_prompt(mock_request, mock_db, mock_user)
-        ...     return isinstance(response, RedirectResponse) and response.status_code == 303
-        >>>
+        ...     return isinstance(response, JSONResponse) and response.status_code == 200 and response.body == b'{"message":"Prompt registered successfully!","success":true}'
+        >>> 
         >>> asyncio.run(test_admin_add_prompt())
         True
+
         >>> prompt_service.register_prompt = original_register_prompt
     """
     logger.debug(f"User {user} is adding a new prompt")
@@ -3188,7 +3189,7 @@ async def admin_edit_prompt(
         >>>
         >>> async def test_admin_edit_prompt():
         ...     response = await admin_edit_prompt(prompt_name, mock_request, mock_db, mock_user)
-        ...     return isinstance(response, RedirectResponse) and response.status_code == 303
+        ...     return isinstance(response, JSONResponse) and response.status_code == 200 and response.body == b'{"message":"Prompt update successfully!","success":true}'
         >>>
         >>> asyncio.run(test_admin_edit_prompt())
         True
