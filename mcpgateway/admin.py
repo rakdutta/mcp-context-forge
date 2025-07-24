@@ -1932,12 +1932,7 @@ async def admin_edit_tool(
     try:
         tool = ToolUpdate(**tool_data)  # Pydantic validation happens here
         await tool_service.update_tool(db, tool_id, tool)
-
-        # root_path = request.scope.get("root_path", "")
-        # is_inactive_checked = form.get("is_inactive_checked", "false")
-        # if is_inactive_checked.lower() == "true":
-        #     return RedirectResponse(f"{root_path}/admin/?include_inactive=true#tools", status_code=303)
-        return JSONResponse(content={"message": "Edit tool succcessfully", "success": True}, status_code=200)
+        return JSONResponse(content={"message": "Edit tool successfully", "success": True}, status_code=200)
     except IntegrityError as ex:
         error_message = ErrorFormatter.format_database_error(ex)
         logger.error(f"IntegrityError in admin_edit_resource: {error_message}")

@@ -457,7 +457,12 @@ class TestAdminToolRoutes:
 
         result = await admin_edit_tool("tool-1", mock_request, mock_db, "test-user")
 
-        assert isinstance(result, RedirectResponse)
+        # Validate response type and content
+        assert isinstance(result, JSONResponse)
+        assert result.status_code == 200
+        payload = json.loads(result.body.decode())
+        assert payload["success"] is True
+        assert payload["message"] == "Edit tool successfully"
 
         # Verify empty strings are handled correctly
         call_args = mock_update_tool.call_args[0]
