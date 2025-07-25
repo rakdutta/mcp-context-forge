@@ -418,6 +418,7 @@ class TestAdminToolRoutes:
         tool_id = "tool-1"
 
         # IntegrityError should return 409 with JSON body
+        # Third-Party
         from sqlalchemy.exc import IntegrityError
 
         mock_update_tool.side_effect = IntegrityError("Integrity constraint", {}, Exception("Duplicate key"))
