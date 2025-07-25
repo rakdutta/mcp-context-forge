@@ -27,18 +27,18 @@ TEST_DOCS_DIR ?= $(DOCS_DIR)/docs/test
 # Project-wide clean-up targets
 # -----------------------------------------------------------------------------
 DIRS_TO_CLEAN := __pycache__ .pytest_cache .tox .ruff_cache .pyre .mypy_cache .pytype \
-                 dist build site .eggs *.egg-info .cache htmlcov certs \
-                 $(VENV_DIR) $(VENV_DIR).sbom $(COVERAGE_DIR) \
-                 node_modules
+	dist build site .eggs *.egg-info .cache htmlcov certs \
+	$(VENV_DIR) $(VENV_DIR).sbom $(COVERAGE_DIR) \
+	node_modules
 
 FILES_TO_CLEAN := .coverage coverage.xml mcp.prof mcp.pstats \
-                  $(PROJECT_NAME).sbom.json \
-                  snakefood.dot packages.dot classes.dot \
-                  $(DOCS_DIR)/pstats.png \
-                  $(DOCS_DIR)/docs/test/sbom.md \
-                  $(DOCS_DIR)/docs/test/{unittest,full,index,test}.md \
+	$(PROJECT_NAME).sbom.json \
+	snakefood.dot packages.dot classes.dot \
+	$(DOCS_DIR)/pstats.png \
+	$(DOCS_DIR)/docs/test/sbom.md \
+	$(DOCS_DIR)/docs/test/{unittest,full,index,test}.md \
 				  $(DOCS_DIR)/docs/images/coverage.svg $(LICENSES_MD) $(METRICS_MD) \
-                  *.db *.sqlite *.sqlite3 mcp.db-journal *.py,cover \
+	*.db *.sqlite *.sqlite3 mcp.db-journal *.py,cover \
 				  .depsorter_cache.json .depupdate.*
 
 COVERAGE_DIR ?= $(DOCS_DIR)/docs/coverage
@@ -186,16 +186,18 @@ certs:                           ## Generate ./certs/cert.pem & ./certs/key.pem 
 .PHONY: clean
 clean:
 	@echo "🧹  Cleaning workspace..."
-	@# Remove matching directories
-	@for dir in $(DIRS_TO_CLEAN); do \
-		find . -type d -name "$$dir" -exec rm -rf {} +; \
-	done
-	@# Remove listed files
-	@rm -f $(FILES_TO_CLEAN)
-	@# Delete Python bytecode
-	@find . -name '*.py[cod]' -delete
-	@# Delete coverage annotated files
-	@find . -name '*.py,cover' -delete
+	@bash -eu -o pipefail -c '\
+		# Remove matching directories \
+		for dir in $(DIRS_TO_CLEAN); do \
+			find . -type d -name "$$dir" -exec rm -rf {} +; \
+		done; \
+		# Remove listed files \
+		rm -f $(FILES_TO_CLEAN); \
+		# Delete Python bytecode \
+		find . -name "*.py[cod]" -delete; \
+		# Delete coverage annotated files \
+		find . -name "*.py,cover" -delete; \
+	'
 	@echo "✅  Clean complete."
 
 
@@ -265,6 +267,7 @@ htmlcov:
 pytest-examples:
 	@echo "🧪 Testing README examples..."
 	@test -d "$(VENV_DIR)" || $(MAKE) venv
+	@test -f test_readme.py || { echo "⚠️  test_readme.py not found - skipping"; exit 0; }
 	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
 		python3 -m pip install -q pytest pytest-examples && \
 		pytest -v test_readme.py"
@@ -437,11 +440,11 @@ images:
 
 # List of individual lint targets; lint loops over these
 LINTERS := isort flake8 pylint mypy bandit pydocstyle pycodestyle pre-commit \
-           ruff pyright radon pyroma pyrefly spellcheck importchecker \
+	ruff pyright radon pyroma pyrefly spellcheck importchecker \
 		   pytype check-manifest markdownlint vulture unimport
 
 .PHONY: lint $(LINTERS) black fawltydeps wily depend snakeviz pstats \
-        spellcheck-sort tox pytype sbom
+	spellcheck-sort tox pytype sbom
 
 
 ## --------------------------------------------------------------------------- ##
@@ -818,7 +821,7 @@ osv-scan: osv-scan-source osv-scan-image
 # help: sonar-info           - How to create a token & which env vars to export
 
 .PHONY: sonar-deps-podman sonar-deps-docker sonar-up-podman sonar-up-docker \
-        sonar-submit-docker sonar-submit-podman pysonar-scanner sonar-info
+	sonar-submit-docker sonar-submit-podman pysonar-scanner sonar-info
 
 # ───── Configuration ─────────────────────────────────────────────────────
 # server image tag
@@ -1154,13 +1157,22 @@ endef
 # help: use-podman           - Switch to Podman runtime
 # help: show-runtime         - Show current container runtime
 
-.PHONY: container-build container-run container-run-host container-run-ssl container-run-ssl-host \
-        container-push container-info container-stop container-logs container-shell \
-        container-health image-list image-clean image-retag container-check-image \
-        container-build-multi use-docker use-podman show-runtime
+# .PHONY: container-build container-run container-run-host container-run-ssl container-run-ssl-host \
+#         container-push container-info container-stop container-logs container-shell \
+#         container-health image-list image-clean image-retag container-check-image \
+#         container-build-multi use-docker use-podman show-runtime
+
+.PHONY: container-build container-run container-run-ssl container-run-ssl-host \
+	container-push container-info container-stop container-logs container-shell \
+	container-health image-list image-clean image-retag container-check-image \
+	container-build-multi use-docker use-podman show-runtime print-runtime \
+	print-image container-validate-env container-check-ports container-wait-healthy
+
 
 # Containerfile to use (can be overridden)
-CONTAINER_FILE ?= Containerfile
+#CONTAINER_FILE ?= Containerfile
+CONTAINER_FILE ?= $(shell [ -f "Containerfile" ] && echo "Containerfile" || echo "Dockerfile")
+
 
 # Define COMMA for the conditional Z flag
 COMMA := ,
@@ -1177,10 +1189,22 @@ container-info:
 	@echo "Container File: $(CONTAINER_FILE)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# container-build:
+# 	@echo "🔨 Building with $(CONTAINER_RUNTIME)..."
+# 	$(CONTAINER_RUNTIME) build \
+# 		--platform=linux/amd64 \
+# 		-f $(CONTAINER_FILE) \
+# 		--tag $(IMAGE_BASE):$(IMAGE_TAG) \
+# 		.
+# 	@echo "✅ Built image: $(call get_image_name)"
+
+# Auto-detect platform based on uname
+PLATFORM ?= linux/$(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+
 container-build:
-	@echo "🔨 Building with $(CONTAINER_RUNTIME)..."
+	@echo "🔨 Building with $(CONTAINER_RUNTIME) for platform $(PLATFORM)..."
 	$(CONTAINER_RUNTIME) build \
-		--platform=linux/amd64 \
+		--platform=$(PLATFORM) \
 		-f $(CONTAINER_FILE) \
 		--tag $(IMAGE_BASE):$(IMAGE_TAG) \
 		.
@@ -1332,10 +1356,11 @@ container-health:
 container-build-multi:
 	@echo "🔨 Building multi-architecture image..."
 	@if [ "$(CONTAINER_RUNTIME)" = "docker" ]; then \
-		if ! docker buildx ls | grep -q "$(PROJECT_NAME)-builder"; then \
+		if ! docker buildx inspect $(PROJECT_NAME)-builder >/dev/null 2>&1; then \
 			echo "📦 Creating buildx builder..."; \
-			docker buildx create --name $(PROJECT_NAME)-builder --use; \
+			docker buildx create --name $(PROJECT_NAME)-builder; \
 		fi; \
+		docker buildx use $(PROJECT_NAME)-builder; \
 		docker buildx build \
 			--platform=linux/amd64,linux/arm64 \
 			-f $(CONTAINER_FILE) \
@@ -1407,7 +1432,8 @@ show-runtime:
 # Pre-flight validation
 .PHONY: container-validate check-ports
 
-container-validate: container-validate-env check-ports
+# container-validate: container-validate-env check-ports
+container-validate: container-validate-env container-check-ports
 	@echo "✅ All validations passed"
 
 container-validate-env:
@@ -1418,6 +1444,11 @@ container-validate-env:
 
 container-check-ports:
 	@echo "🔍 Checking port availability..."
+	@if ! command -v lsof >/dev/null 2>&1; then \
+		echo "⚠️  lsof not installed - skipping port check"; \
+		echo "💡 Install with: brew install lsof (macOS) or apt-get install lsof (Linux)"; \
+		exit 0; \
+	fi
 	@failed=0; \
 	for port in 4444 8000 8080; do \
 		if lsof -Pi :$$port -sTCP:LISTEN -t >/dev/null 2>&1; then \
@@ -1463,6 +1494,19 @@ container-run-safe: container-validate container-run
 container-run-ssl-safe: container-validate container-run-ssl
 	@$(MAKE) container-wait-healthy
 
+container-wait-healthy:
+	@echo "⏳ Waiting for container to be healthy..."
+	@for i in $$(seq 1 30); do \
+		if $(CONTAINER_RUNTIME) inspect $(PROJECT_NAME) --format='{{.State.Health.Status}}' 2>/dev/null | grep -q healthy; then \
+			echo "✅ Container is healthy"; \
+			exit 0; \
+		fi; \
+		echo "⏳ Waiting for container health... ($$i/30)"; \
+		sleep 2; \
+	done; \
+	echo "⚠️  Container not healthy after 60 seconds"; \
+	exit 1
+
 # =============================================================================
 # 🦭 PODMAN CONTAINER BUILD & RUN
 # =============================================================================
@@ -1482,8 +1526,8 @@ container-run-ssl-safe: container-validate container-run-ssl
 # help: podman-top           - Show live top-level process info in container
 
 .PHONY: podman-dev podman podman-prod podman-build podman-run podman-run-shell \
-        podman-run-host podman-run-ssl podman-run-ssl-host podman-stop podman-test \
-        podman-logs podman-stats podman-top podman-shell
+	podman-run-host podman-run-ssl podman-run-ssl-host podman-stop podman-test \
+	podman-logs podman-stats podman-top podman-shell
 
 podman-dev:
 	@$(MAKE) container-build CONTAINER_RUNTIME=podman CONTAINER_FILE=Containerfile
@@ -1560,8 +1604,8 @@ podman-top:
 # help: docker-logs          - Follow container logs (⌃C to quit)
 
 .PHONY: docker-dev docker docker-prod docker-build docker-run docker-run-host docker-run-ssl \
-        docker-run-ssl-host docker-stop docker-test docker-logs docker-stats \
-        docker-top docker-shell
+	docker-run-ssl-host docker-stop docker-test docker-logs docker-stats \
+	docker-top docker-shell
 
 docker-dev:
 	@$(MAKE) container-build CONTAINER_RUNTIME=docker CONTAINER_FILE=Containerfile
@@ -1654,11 +1698,11 @@ ifeq ($(strip $(COMPOSE_CMD)),)
   COMPOSE_CMD := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || true)
   # If not found, check for podman compose
   ifeq ($(strip $(COMPOSE_CMD)),)
-    COMPOSE_CMD := $(shell podman compose version >/dev/null 2>&1 && echo "podman compose" || true)
+	COMPOSE_CMD := $(shell podman compose version >/dev/null 2>&1 && echo "podman compose" || true)
   endif
   # If still not found, check for podman-compose
   ifeq ($(strip $(COMPOSE_CMD)),)
-    COMPOSE_CMD := $(shell command -v podman-compose >/dev/null 2>&1 && echo "podman-compose" || echo "docker compose")
+	COMPOSE_CMD := $(shell command -v podman-compose >/dev/null 2>&1 && echo "podman-compose" || echo "docker compose")
   endif
 endif
 
@@ -1670,9 +1714,9 @@ $(COMPOSE_CMD) -f $(COMPOSE_FILE)
 endef
 
 .PHONY: compose-up compose-restart compose-build compose-pull \
-        compose-logs compose-ps compose-shell compose-stop compose-down \
-        compose-rm compose-clean compose-validate compose-exec \
-        compose-logs-service compose-restart-service compose-scale compose-up-safe
+	compose-logs compose-ps compose-shell compose-stop compose-down \
+	compose-rm compose-clean compose-validate compose-exec \
+	compose-logs-service compose-restart-service compose-scale compose-up-safe
 
 # Validate compose file
 compose-validate:
@@ -1689,8 +1733,10 @@ compose-up: compose-validate
 	IMAGE_LOCAL=$(call get_image_name) $(COMPOSE) up -d
 
 compose-restart:
-	@echo "🔄  Restarting stack (build + pull if needed)..."
-	IMAGE_LOCAL=$(IMAGE_LOCAL) $(COMPOSE) up -d --pull=missing --build  # These flags might conflict
+	@echo "🔄  Restarting stack..."
+	$(COMPOSE) pull
+	$(COMPOSE) build
+	IMAGE_LOCAL=$(IMAGE_LOCAL) $(COMPOSE) up -d
 
 compose-build:
 	IMAGE_LOCAL=$(call get_image_name) $(COMPOSE) build
@@ -1767,8 +1813,8 @@ compose-up-safe: compose-validate compose-up
 # help: ibmcloud-ce-rm              - Delete the Code Engine application
 
 .PHONY: ibmcloud-check-env ibmcloud-cli-install ibmcloud-login ibmcloud-ce-login \
-        ibmcloud-list-containers ibmcloud-tag ibmcloud-push ibmcloud-deploy \
-        ibmcloud-ce-logs ibmcloud-ce-status ibmcloud-ce-rm
+	ibmcloud-list-containers ibmcloud-tag ibmcloud-push ibmcloud-deploy \
+	ibmcloud-ce-logs ibmcloud-ce-status ibmcloud-ce-rm
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📦  Load environment file with IBM Cloud Code Engine configuration
@@ -1794,6 +1840,10 @@ IBMCLOUD_REGISTRY_SECRET ?= $(IBMCLOUD_PROJECT)-registry-secret
 # IBMCLOUD_API_KEY             = IBM Cloud IAM API key (optional, use --sso if not set)
 
 ibmcloud-check-env:
+	@test -f .env.ce || { \
+		echo "❌ Missing required .env.ce file!"; \
+		exit 1; \
+	}
 	@bash -eu -o pipefail -c '\
 		echo "🔍  Verifying required IBM Cloud variables (.env.ce)..."; \
 		missing=0; \
@@ -1980,9 +2030,9 @@ IMAGE            ?= $(IMG):$(TAG)  # or IMAGE=ghcr.io/ibm/mcp-context-forge:$(TA
 # help: minikube-registry-url 	- Echo the dynamic registry URL (e.g. http://localhost:32790)
 
 .PHONY: minikube-install helm-install minikube-start minikube-stop minikube-delete \
-        minikube-tunnel minikube-dashboard minikube-image-load minikube-k8s-apply \
-        minikube-status minikube-context minikube-ssh minikube-reset minikube-registry-url \
-        minikube-port-forward
+	minikube-tunnel minikube-dashboard minikube-image-load minikube-k8s-apply \
+	minikube-status minikube-context minikube-ssh minikube-reset minikube-registry-url \
+	minikube-port-forward
 
 # -----------------------------------------------------------------------------
 # 🚀  INSTALLATION HELPERS
@@ -2165,7 +2215,7 @@ GIT_REPO    ?= https://github.com/ibm/mcp-context-forge.git
 GIT_PATH    ?= k8s
 
 .PHONY: argocd-cli-install argocd-install argocd-password argocd-forward \
-        argocd-login argocd-app-bootstrap argocd-app-sync
+	argocd-login argocd-app-bootstrap argocd-app-sync
 
 argocd-cli-install:
 	@echo "🔧 Installing Argo CD CLI..."
@@ -2227,7 +2277,7 @@ argocd-app-sync:
 # help: local-pypi-clean       - Full cycle: build → upload → install locally
 
 .PHONY: local-pypi-install local-pypi-start local-pypi-start-auth local-pypi-stop local-pypi-upload \
-        local-pypi-upload-auth local-pypi-test local-pypi-clean
+	local-pypi-upload-auth local-pypi-test local-pypi-clean
 
 LOCAL_PYPI_DIR := $(HOME)/local-pypi
 LOCAL_PYPI_URL := http://localhost:8085
@@ -2375,7 +2425,7 @@ local-pypi-debug:
 
 
 .PHONY: devpi-install devpi-init devpi-start devpi-stop devpi-setup-user devpi-upload \
-        devpi-delete devpi-test devpi-clean devpi-status devpi-web devpi-restart
+	devpi-delete devpi-test devpi-clean devpi-status devpi-web devpi-restart
 
 DEVPI_HOST := localhost
 DEVPI_PORT := 3141
@@ -2446,14 +2496,14 @@ devpi-stop:
 	@pids=$(pgrep -f "devpi-server.*$(DEVPI_PORT)" 2>/dev/null || true); \
 	if [ -n "$pids" ]; then \
 		echo "🔄  Killing remaining devpi processes: $pids"; \
-		echo "$pids" | xargs -r kill 2>/dev/null || true; \
+		echo "$pids" | xargs $(XARGS_FLAGS) kill 2>/dev/null || true; \
 		sleep 1; \
-		echo "$pids" | xargs -r kill -9 2>/dev/null || true; \
+		echo "$pids" | xargs $(XARGS_FLAGS) kill -9 2>/dev/null || true; \
 	fi
 	@# Force kill anything using the port
 	@if lsof -ti :$(DEVPI_PORT) >/dev/null 2>&1; then \
 		echo "⚠️   Port $(DEVPI_PORT) still in use, force killing..."; \
-		lsof -ti :$(DEVPI_PORT) | xargs -r kill -9 2>/dev/null || true; \
+		lsof -ti :$(DEVPI_PORT) | xargs $(XARGS_FLAGS) kill -9 2>/dev/null || true; \
 		sleep 1; \
 	fi
 	@echo "✅  DevPi server stopped"
@@ -2619,7 +2669,16 @@ devpi-delete: devpi-setup-user                 ## Delete mcp-contextforge-gatewa
 # ──────────────────────────
 # Which shell files to scan
 # ──────────────────────────
-SHELL_SCRIPTS := $(shell find . -type f -name '*.sh' -not -path './node_modules/*')
+SHELL_SCRIPTS := $(shell find . -type f -name '*.sh' \
+	-not -path './node_modules/*' \
+	-not -path './.venv/*' \
+	-not -path './venv/*' \
+	-not -path './$(VENV_DIR)/*' \
+	-not -path './.git/*' \
+	-not -path './dist/*' \
+	-not -path './build/*' \
+	-not -path './.tox/*')
+
 
 .PHONY: shell-linters-install shell-lint shfmt-fix shellcheck bashate
 
@@ -2640,9 +2699,13 @@ shell-linters-install:     ## 🔧  Install shellcheck, shfmt, bashate
 	# -------- shfmt (Go) -------- \
 	if ! command -v shfmt >/dev/null 2>&1 ; then \
 	  echo "🛠  Installing shfmt..." ; \
-	  GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@latest || \
-	  { echo "⚠️  go not found - install Go or brew/apt shfmt package manually"; } ; \
-	  export PATH=$$PATH:$$HOME/go/bin ; \
+	  if command -v go >/dev/null 2>&1; then \
+	    GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@latest; \
+	    mkdir -p $(VENV_DIR)/bin; \
+	    ln -sf $$HOME/go/bin/shfmt $(VENV_DIR)/bin/shfmt 2>/dev/null || true; \
+	  else \
+	    echo "⚠️  Go not found - install Go or brew/apt shfmt package manually"; \
+	  fi ; \
 	fi ; \
 	# -------- bashate (pip) ----- \
 	if ! $(VENV_DIR)/bin/bashate -h >/dev/null 2>&1 ; then \
@@ -2898,11 +2961,13 @@ test-full: coverage test-ui-report
 # help: pip-audit           - Audit Python dependencies for published CVEs
 # help: gitleaks-install    - Install gitleaks secret scanner
 # help: gitleaks            - Scan git history for secrets
+# help: devskim-install-dotnet - Install .NET SDK and DevSkim CLI (security patterns scanner)
+# help: devskim             - Run DevSkim static analysis for security anti-patterns
 
 # List of security tools to run with security-all
-SECURITY_TOOLS := semgrep dodgy dlint interrogate prospector pip-audit
+SECURITY_TOOLS := semgrep dodgy dlint interrogate prospector pip-audit devskim
 
-.PHONY: security-all security-report security-fix $(SECURITY_TOOLS) gitleaks-install gitleaks pyupgrade
+.PHONY: security-all security-report security-fix $(SECURITY_TOOLS) gitleaks-install gitleaks pyupgrade devskim-install-dotnet devskim
 
 ## --------------------------------------------------------------------------- ##
 ##  Master security target
@@ -3005,6 +3070,63 @@ gitleaks:                           ## 🔍 Scan for secrets in git history
 	@echo "💡 To scan git history: gitleaks detect --source . --log-opts='--all'"
 
 ## --------------------------------------------------------------------------- ##
+##  DevSkim (.NET-based security patterns scanner)
+## --------------------------------------------------------------------------- ##
+devskim-install-dotnet:             ## 📦 Install .NET SDK and DevSkim CLI
+	@echo "📦 Installing .NET SDK and DevSkim CLI..."
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		echo "🍏 Installing .NET SDK for macOS..."; \
+		brew install --cask dotnet-sdk || brew upgrade --cask dotnet-sdk; \
+	elif [ "$$(uname)" = "Linux" ]; then \
+		echo "🐧 Installing .NET SDK for Linux..."; \
+		if command -v apt-get >/dev/null 2>&1; then \
+			wget -q https://packages.microsoft.com/config/ubuntu/$$(lsb_release -rs)/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb 2>/dev/null || \
+			wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb -O /tmp/packages-microsoft-prod.deb; \
+			sudo dpkg -i /tmp/packages-microsoft-prod.deb; \
+			sudo apt-get update; \
+			sudo apt-get install -y dotnet-sdk-9.0 || sudo apt-get install -y dotnet-sdk-8.0 || sudo apt-get install -y dotnet-sdk-7.0; \
+			rm -f /tmp/packages-microsoft-prod.deb; \
+		elif command -v dnf >/dev/null 2>&1; then \
+			sudo dnf install -y dotnet-sdk-9.0 || sudo dnf install -y dotnet-sdk-8.0; \
+		else \
+			echo "❌ Unsupported Linux distribution. Please install .NET SDK manually."; \
+			echo "   Visit: https://dotnet.microsoft.com/download"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Unsupported OS. Please install .NET SDK manually."; \
+		echo "   Visit: https://dotnet.microsoft.com/download"; \
+		exit 1; \
+	fi
+	@echo "🔧 Installing DevSkim CLI tool..."
+	@export PATH="$$PATH:$$HOME/.dotnet/tools" && \
+		dotnet tool install --global Microsoft.CST.DevSkim.CLI || \
+		dotnet tool update --global Microsoft.CST.DevSkim.CLI
+	@echo "✅  DevSkim installed successfully!"
+	@echo "💡  You may need to add ~/.dotnet/tools to your PATH:"
+	@echo "    export PATH=\"\$$PATH:\$$HOME/.dotnet/tools\""
+
+devskim:                            ## 🛡️  Run DevSkim security patterns analysis
+	@echo "🛡️  Running DevSkim static analysis..."
+	@if command -v devskim >/dev/null 2>&1 || [ -f "$$HOME/.dotnet/tools/devskim" ]; then \
+		export PATH="$$PATH:$$HOME/.dotnet/tools" && \
+		echo "📂 Scanning mcpgateway/ for security anti-patterns..." && \
+		devskim analyze --source-code mcpgateway --output-file devskim-results.sarif -f sarif && \
+		echo "" && \
+		echo "📊 Detailed findings:" && \
+		devskim analyze --source-code mcpgateway -f text && \
+		echo "" && \
+		echo "📄 SARIF report saved to: devskim-results.sarif" && \
+		echo "💡 To view just the summary: devskim analyze --source-code mcpgateway -f text | grep -E '(Critical|Important|Moderate|Low)' | sort | uniq -c"; \
+	else \
+		echo "❌ DevSkim not found in PATH or ~/.dotnet/tools/"; \
+		echo "💡 Install with:"; \
+		echo "   • Run 'make devskim-install-dotnet'"; \
+		echo "   • Or install .NET SDK and run: dotnet tool install --global Microsoft.CST.DevSkim.CLI"; \
+		echo "   • Then add to PATH: export PATH=\"\$$PATH:\$$HOME/.dotnet/tools\""; \
+	fi
+
+## --------------------------------------------------------------------------- ##
 ##  Security reporting and advanced targets
 ## --------------------------------------------------------------------------- ##
 security-report:                    ## 📊 Generate comprehensive security report
@@ -3021,6 +3143,14 @@ security-report:                    ## 📊 Generate comprehensive security repo
 	@/bin/bash -c "source $(VENV_DIR)/bin/activate && \
 		python3 -m pip install -q dodgy && \
 		$(VENV_DIR)/bin/dodgy mcpgateway tests || true" >> $(DOCS_DIR)/docs/security/report.md 2>&1
+	@echo "" >> $(DOCS_DIR)/docs/security/report.md
+	@echo "## DevSkim Security Anti-patterns" >> $(DOCS_DIR)/docs/security/report.md
+	@if command -v devskim >/dev/null 2>&1 || [ -f "$$HOME/.dotnet/tools/devskim" ]; then \
+		export PATH="$$PATH:$$HOME/.dotnet/tools" && \
+		devskim analyze --source-code mcpgateway --format text >> $(DOCS_DIR)/docs/security/report.md 2>&1 || true; \
+	else \
+		echo "DevSkim not installed - skipping" >> $(DOCS_DIR)/docs/security/report.md; \
+	fi
 	@echo "✅ Security report saved to $(DOCS_DIR)/docs/security/report.md"
 
 security-fix:                       ## 🔧 Auto-fix security issues where possible
@@ -3038,3 +3168,4 @@ security-fix:                       ## 🔧 Auto-fix security issues where possi
 	@echo "   - Dependency updates (run 'make update')"
 	@echo "   - Secrets in code (review dodgy/gitleaks output)"
 	@echo "   - Security patterns (review semgrep output)"
+	@echo "   - DevSkim findings (review devskim-results.sarif)"
