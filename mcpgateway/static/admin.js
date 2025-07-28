@@ -4337,19 +4337,17 @@ async function handleEditPromptFormSubmit(e) {
         formData.append("is_inactive_checked", isInactiveCheckedBool);
 
         // Get prompt identifier (assume a hidden input named 'prompt_id'  is present)
-        let promptId = formData.get("prompt_id")
-        console.log("Editing prompt with ID:", promptId);
-        // Remove prompt_id/original_name from formData if needed (optional)
-        // formData.delete("prompt_id");
+        // let promptId = formData.get("prompt_id")
+        // console.log("Editing prompt with ID:", promptId);
+        // // Remove prompt_id/original_name from formData if needed (optional)
+        // // formData.delete("prompt_id");
 
-        // Use PUT or PATCH for update, and include the identifier in the URL
-        const response = await fetchWithTimeout(
-            `${window.ROOT_PATH}/admin/prompts/${encodeURIComponent(promptId)}`,
-            {
-                method: "PUT",
-                body: formData,
-            },
-        );
+          // Submit via fetch
+        const response = await fetch(form.action, {
+            method: "POST",
+            body: formData,
+            
+        });
 
         const result = await response.json();
         if (!result.success) {
