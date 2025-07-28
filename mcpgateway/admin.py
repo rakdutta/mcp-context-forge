@@ -3105,7 +3105,7 @@ async def admin_add_prompt(request: Request, db: Session = Depends(get_db), user
         >>> async def test_admin_add_prompt():
         ...     response = await admin_add_prompt(mock_request, mock_db, mock_user)
         ...     return isinstance(response, JSONResponse) and response.status_code == 200 and response.body == b'{"message":"Prompt registered successfully!","success":true}'
-        >>> 
+        >>>
         >>> asyncio.run(test_admin_add_prompt())
         True
 
