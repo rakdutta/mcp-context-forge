@@ -172,11 +172,14 @@ class TestPromptService:
         assert "Failed to register prompt" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("err_msg", [
-        "UNIQUE constraint failed: prompt.name",  # duplicate name
-        "CHECK constraint failed: prompt",        # check constraint
-        "NOT NULL constraint failed: prompt.name" # not null
-    ])
+    @pytest.mark.parametrize(
+        "err_msg",
+        [
+            "UNIQUE constraint failed: prompt.name",  # duplicate name
+            "CHECK constraint failed: prompt",  # check constraint
+            "NOT NULL constraint failed: prompt.name",  # not null
+        ],
+    )
     async def test_register_prompt_integrity_error(self, prompt_service, test_db, err_msg):
         test_db.execute = Mock(return_value=_make_execute_result(scalar=None))
         test_db.add, test_db.commit, test_db.refresh = Mock(), Mock(), Mock()

@@ -4254,7 +4254,6 @@ async function handleResourceFormSubmit(e) {
     }
 }
 
-
 async function handlePromptFormSubmit(e) {
     e.preventDefault();
     const form = e.target;
@@ -4308,7 +4307,6 @@ async function handlePromptFormSubmit(e) {
         showErrorMessage(error.message);
     } finally {
         // location.reload();
-        
         if (loading) {
             loading.style.display = "none";
         }
@@ -4330,23 +4328,20 @@ async function handleEditPromptFormSubmit(e) {
         }
 
         // Save CodeMirror editors' contents if present
-        if (window.promptToolHeadersEditor) window.promptToolHeadersEditor.save();
-        if (window.promptToolSchemaEditor) window.promptToolSchemaEditor.save();
+        if (window.promptToolHeadersEditor) {
+            window.promptToolHeadersEditor.save();
+        }
+        if (window.promptToolSchemaEditor) {
+            window.promptToolSchemaEditor.save();
+        }
 
         const isInactiveCheckedBool = isInactiveChecked("prompts");
         formData.append("is_inactive_checked", isInactiveCheckedBool);
 
-        // Get prompt identifier (assume a hidden input named 'prompt_id'  is present)
-        // let promptId = formData.get("prompt_id")
-        // console.log("Editing prompt with ID:", promptId);
-        // // Remove prompt_id/original_name from formData if needed (optional)
-        // // formData.delete("prompt_id");
-
-          // Submit via fetch
+        // Submit via fetch
         const response = await fetch(form.action, {
             method: "POST",
             body: formData,
-            
         });
 
         const result = await response.json();
@@ -4363,7 +4358,6 @@ async function handleEditPromptFormSubmit(e) {
         showErrorMessage(error.message);
     }
 }
-
 
 async function handleServerFormSubmit(e) {
     e.preventDefault();
