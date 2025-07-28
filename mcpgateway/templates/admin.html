@@ -1422,7 +1422,7 @@
             method="POST"
             action="{{ root_path }}/admin/prompts"
             id="add-prompt-form"
-            onsubmit="return handleToggleSubmit(event, 'prompts')"
+            {# onsubmit="return handleToggleSubmit(event, 'prompts')" #}
           >
             <div class="grid grid-cols-1 gap-6">
               <div>
@@ -1472,7 +1472,12 @@
                 ></textarea>
               </div>
             </div>
-            <div class="mt-6">
+            <div id="add-prompts-loading" style="display: none">
+              <div class="spinner"></div>
+            </div>
+            <div id="status-prompts"></div>
+          </div>
+          <div class="mt-6">
               <button
                 type="submit"
                 x-tooltip="'💡Creates a reusable message template with parameters.'"
