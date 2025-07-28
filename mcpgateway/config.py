@@ -495,8 +495,6 @@ class Settings(BaseSettings):
     )
     validation_dangerous_js_pattern: str = r"(?i)(?:^|\s|[\"'`<>=])(javascript:|vbscript:|data:\s*[^,]*[;\s]*(javascript|vbscript)|\bon[a-z]+\s*=|<\s*script\b)"
 
-    validation_allowed_url_schemes: List[str] = ["http://", "https://", "ws://", "wss://"]
-
     # Character validation patterns
     validation_name_pattern: str = r"^[a-zA-Z0-9_.\-\s]+$"  # Allow spaces for names
     validation_identifier_pattern: str = r"^[a-zA-Z0-9_\-\.]+$"  # No spaces for IDs

@@ -4130,7 +4130,7 @@ async function handleGatewayFormSubmit(e) {
     const form = e.target;
     const formData = new FormData(form);
     const status = safeGetElement("status-gateways");
-    const loading = safeGetElement("add-gateway-loading");
+    const loading = safeGetElement("add-resources-loading");
 
     try {
         // Validate form inputs
