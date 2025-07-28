@@ -476,6 +476,7 @@ class PromptService:
             return PromptRead.model_validate(self._convert_db_prompt(prompt))
 
         except IntegrityError as ie:
+            db.rollback()
             logger.error(f"IntegrityErrors in group: {ie}")
             raise ie
         except Exception as e:
