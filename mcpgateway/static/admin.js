@@ -4292,12 +4292,6 @@ async function handlePromptFormSubmit(e) {
 
         const result = await response.json();
         if (!result.success) {
-            // if (status) {
-            //     status.textContent = result.message || "An error occurred!";
-            //     status.classList.add("error-status");
-            // }
-            // showErrorMessage(result.message || "An error occurred");
-            // return; // Do not throw, do not redirect, do not reload
             throw new Error(result.message || "An error occurred");
         }
         // Only redirect on success
@@ -4318,6 +4312,57 @@ async function handlePromptFormSubmit(e) {
         if (loading) {
             loading.style.display = "none";
         }
+    }
+}
+
+async function handleEditPromptFormSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+        // Validate inputs
+        const name = formData.get("name");
+        const nameValidation = validateInputName(name, "prompt");
+        if (!nameValidation.valid) {
+            showErrorMessage(nameValidation.error);
+            return;
+        }
+
+        // Save CodeMirror editors' contents if present
+        if (window.promptToolHeadersEditor) window.promptToolHeadersEditor.save();
+        if (window.promptToolSchemaEditor) window.promptToolSchemaEditor.save();
+
+        const isInactiveCheckedBool = isInactiveChecked("prompts");
+        formData.append("is_inactive_checked", isInactiveCheckedBool);
+
+        // Get prompt identifier (assume a hidden input named 'prompt_id'  is present)
+        let promptId = formData.get("prompt_id")
+        console.log("Editing prompt with ID:", promptId);
+        // Remove prompt_id/original_name from formData if needed (optional)
+        // formData.delete("prompt_id");
+
+        // Use PUT or PATCH for update, and include the identifier in the URL
+        const response = await fetchWithTimeout(
+            `${window.ROOT_PATH}/admin/prompts/${encodeURIComponent(promptId)}`,
+            {
+                method: "PUT",
+                body: formData,
+            },
+        );
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || "An error occurred");
+        }
+        // Only redirect on success
+        const redirectUrl = isInactiveCheckedBool
+            ? `${window.ROOT_PATH}/admin?include_inactive=true#prompts`
+            : `${window.ROOT_PATH}/admin#prompts`;
+        window.location.href = redirectUrl;
+    } catch (error) {
+        console.error("Error:", error);
+        showErrorMessage(error.message);
     }
 }
 
@@ -4969,6 +5014,15 @@ function setupFormHandlers() {
         promptForm.addEventListener("submit", handlePromptFormSubmit);
     }
 
+    const editPromptForm = safeGetElement("edit-prompt-form");
+    if (editPromptForm) {
+        editPromptForm.addEventListener("submit", handleEditPromptFormSubmit);
+        editPromptForm.addEventListener("click", () => {
+            if (getComputedStyle(editPromptForm).display !== "none") {
+                refreshEditors();
+            }
+        });
+    }
 
     const toolForm = safeGetElement("add-tool-form");
     if (toolForm) {
