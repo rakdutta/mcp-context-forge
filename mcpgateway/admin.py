@@ -449,14 +449,14 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
             # Unexpected error during runtime — 500 is suitable
             return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
-          if isinstance(ex, ValidationError):
+        if isinstance(ex, ValidationError):
             # Pydantic or input validation failure — 422 Unprocessable Entity is correct
             return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
-          
+
         if isinstance(ex, IntegrityError):
             # DB constraint violation — 409 Conflict is appropriate
             return JSONResponse(content=ErrorFormatter.format_database_error(ex), status_code=409)
-          
+
         # For any other unhandled error, default to 500
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
