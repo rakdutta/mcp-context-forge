@@ -550,8 +550,8 @@ class ToolUpdate(BaseModelWithConfigDict):
     name: Optional[str] = Field(None, description="Unique name for the tool")
     url: Optional[Union[str, AnyHttpUrl]] = Field(None, description="Tool endpoint URL")
     description: Optional[str] = Field(None, description="Tool description")
-    request_type: Optional[Literal["GET", "POST", "PUT", "DELETE", "PATCH", "SSE", "STDIO", "STREAMABLEHTTP"]] = Field(None, description="HTTP method to be used for invoking the tool")
     integration_type: Optional[Literal["MCP", "REST"]] = Field(None, description="Tool integration type")
+    request_type: Optional[Literal["GET", "POST", "PUT", "DELETE", "PATCH", "SSE", "STDIO", "STREAMABLEHTTP"]] = Field(None, description="HTTP method to be used for invoking the tool")
     headers: Optional[Dict[str, str]] = Field(None, description="Additional headers to send when invoking the tool")
     input_schema: Optional[Dict[str, Any]] = Field(None, description="JSON Schema for validating tool parameters")
     annotations: Optional[Dict[str, Any]] = Field(None, description="Tool annotations for behavior hints")
@@ -645,8 +645,8 @@ class ToolUpdate(BaseModelWithConfigDict):
         Raises:
             ValueError: When value is unsafe
         """
-        integration_type = values.config.get("integration_type", "MCP")
 
+        integration_type = values.data.get("integration_type", "MCP")
         if integration_type == "MCP":
             allowed = ["SSE", "STREAMABLEHTTP", "STDIO"]
         else:  # REST
@@ -1572,6 +1572,16 @@ class PromptInvocation(BaseModelWithConfigDict):
 
 # --- Transport Type ---
 class TransportType(str, Enum):
+    """
+    Enumeration of supported transport mechanisms for communication between components.
+
+    Attributes:
+        SSE (str): Server-Sent Events transport.
+        HTTP (str): Standard HTTP-based transport.
+        STDIO (str): Standard input/output transport.
+        STREAMABLEHTTP (str): HTTP transport with streaming.
+    """
+
     SSE = "SSE"
     HTTP = "HTTP"
     STDIO = "STDIO"
@@ -1690,6 +1700,24 @@ class GatewayCreate(BaseModel):
     @field_validator("transport")
     @classmethod
     def validate_transport(cls, v: str) -> str:
+        """
+        Validates that the given transport value is one of the supported TransportType values.
+
+        Args:
+            v (str): The transport value to validate.
+
+        Returns:
+            str: The validated transport value if it is valid.
+
+        Raises:
+            ValueError: If the provided value is not a valid transport type.
+
+        Valid transport types are defined in the TransportType enum:
+            - SSE
+            - HTTP
+            - STDIO
+            - STREAMABLEHTTP
+        """
         if v not in [t.value for t in TransportType]:
             raise ValueError(f"Invalid transport type: {v}. Must be one of: {', '.join([t.value for t in TransportType])}")
         return v
