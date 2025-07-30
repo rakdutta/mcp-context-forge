@@ -2382,7 +2382,7 @@ async def admin_edit_gateway(
     request: Request,
     db: Session = Depends(get_db),
     user: str = Depends(require_auth),
-) -> RedirectResponse:
+) -> JSONResponse:
     """Edit a gateway via the admin UI.
 
     Expects form fields:
@@ -2467,7 +2467,6 @@ async def admin_edit_gateway(
     """
     logger.debug(f"User {user} is editing gateway ID {gateway_id}")
     form = await request.form()
-    is_inactive_checked = form.get("is_inactive_checked", "false")
     try:
         gateway = GatewayUpdate(  # Pydantic validation happens here
             name=form.get("name"),
@@ -2482,18 +2481,23 @@ async def admin_edit_gateway(
             auth_header_value=form.get("auth_header_value", None),
         )
         await gateway_service.update_gateway(db, gateway_id, gateway)
+        return JSONResponse(
+            content={"message": "Gateway registered successfully!", "success": True},
+            status_code=200,
+        )
+    except Exception as ex:
+        if isinstance(ex, GatewayConnectionError):
+            return JSONResponse(content={"message": str(ex), "success": False}, status_code=502)
+        if isinstance(ex, ValueError):
+            return JSONResponse(content={"message": str(ex), "success": False}, status_code=400)
+        if isinstance(ex, RuntimeError):
+            return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
+        if isinstance(ex, ValidationError):
+            return JSONResponse(content=ErrorFormatter.format_validation_error(ex), status_code=422)
+        if isinstance(ex, IntegrityError):
+            return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(ex))
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
-        root_path = request.scope.get("root_path", "")
-        if is_inactive_checked.lower() == "true":
-            return RedirectResponse(f"{root_path}/admin/?include_inactive=true#gateways", status_code=303)
-        return RedirectResponse(f"{root_path}/admin#gateways", status_code=303)
-    except Exception as e:  # Catch all exceptions including ValidationError for redirect
-        logger.error(f"Error editing gateway: {e}")
-
-        root_path = request.scope.get("root_path", "")
-        if is_inactive_checked.lower() == "true":
-            return RedirectResponse(f"{root_path}/admin/?include_inactive=true#gateways", status_code=303)
-        return RedirectResponse(f"{root_path}/admin#gateways", status_code=303)
 
 
 @admin_router.post("/gateways/{gateway_id}/delete")

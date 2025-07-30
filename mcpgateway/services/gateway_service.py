@@ -477,6 +477,8 @@ class GatewayService:
             GatewayNotFoundError: If gateway not found
             GatewayError: For other update errors
             GatewayNameConflictError: If gateway name conflict occurs
+            IntegrityError: If there is a database integrity error
+            ValidationError: If validation fails
         """
         try:
             # Find gateway
@@ -558,7 +560,12 @@ class GatewayService:
 
                 logger.info(f"Updated gateway: {gateway.name}")
                 return GatewayRead.model_validate(gateway)
-
+        except GatewayNameConflictError as ge:
+            logger.error(f"GatewayNameConflictError in group: {ge}")
+            raise ge
+        except IntegrityError as ie:
+            logger.error(f"IntegrityErrors in group: {ie}")
+            raise ie
         except Exception as e:
             db.rollback()
             raise GatewayError(f"Failed to update gateway: {str(e)}")
