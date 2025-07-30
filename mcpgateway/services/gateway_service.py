@@ -514,12 +514,14 @@ class GatewayService:
 
                     # if auth_type is not None and only then check auth_value
                     if getattr(gateway, "auth_value", {}) != {}:
+                        logger.info(f"Updating auth_value for gateway {gateway.name}")  
                         gateway.auth_value = gateway_update.auth_value
 
                 # Try to reinitialize connection if URL changed
                 if gateway_update.url is not None:
                     try:
                         capabilities, tools = await self._initialize_gateway(gateway.url, gateway.auth_value, gateway.transport)
+                        logger.info(f"Gateway {gateway.name} initialized with capabilities: {capabilities} and tools: {new_tool_names}")
                         new_tool_names = [tool.name for tool in tools]
 
                         for tool in tools:
@@ -540,7 +542,7 @@ class GatewayService:
                                         auth_value=gateway.auth_value,
                                     )
                                 )
-
+                        logger.info(f"Gateway {gateway.name} initialized with capabilities: {capabilities} and tools: {new_tool_names}")
                         gateway.capabilities = capabilities
                         gateway.tools = [tool for tool in gateway.tools if tool.original_name in new_tool_names]  # keep only still-valid rows
                         gateway.last_seen = datetime.now(timezone.utc)
