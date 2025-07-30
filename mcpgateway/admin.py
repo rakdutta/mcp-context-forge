@@ -2499,7 +2499,6 @@ async def admin_edit_gateway(
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
 
 
-
 @admin_router.post("/gateways/{gateway_id}/delete")
 async def admin_delete_gateway(gateway_id: str, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)) -> RedirectResponse:
     """

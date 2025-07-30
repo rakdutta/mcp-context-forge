@@ -514,7 +514,6 @@ class GatewayService:
 
                     # if auth_type is not None and only then check auth_value
                     if getattr(gateway, "auth_value", {}) != {}:
-                        logger.info(f"Updating auth_value for gateway {gateway.name}")  
                         gateway.auth_value = gateway_update.auth_value
 
                 # Try to reinitialize connection if URL changed
