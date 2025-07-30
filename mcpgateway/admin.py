@@ -2468,7 +2468,6 @@ async def admin_edit_gateway(
     logger.debug(f"User {user} is editing gateway ID {gateway_id}")
     form = await request.form()
     try:
-        logger.info(f"Form data received for gateway edit: {form}")
         gateway = GatewayUpdate(  # Pydantic validation happens here
             name=form.get("name"),
             url=form["url"],
@@ -2481,7 +2480,6 @@ async def admin_edit_gateway(
             auth_header_key=form.get("auth_header_key", None),
             auth_header_value=form.get("auth_header_value", None),
         )
-        logger.debug(f"Gateway update data built: {gateway.auth_token},{gateway.auth_token} ")
         await gateway_service.update_gateway(db, gateway_id, gateway)
         return JSONResponse(
             content={"message": "Gateway registered successfully!", "success": True},
