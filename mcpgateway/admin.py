@@ -58,7 +58,7 @@ from mcpgateway.schemas import (
     ToolRead,
     ToolUpdate,
 )
-from mcpgateway.services.gateway_service import GatewayConnectionError, GatewayNotFoundError, GatewayService
+from mcpgateway.services.gateway_service import GatewayConnectionError, GatewayNotFoundError, GatewayService,GatewayNameConflictError
 from mcpgateway.services.prompt_service import PromptNotFoundError, PromptService
 from mcpgateway.services.resource_service import ResourceNotFoundError, ResourceService
 from mcpgateway.services.root_service import RootService
@@ -2420,7 +2420,7 @@ async def admin_edit_gateway(
         >>>
         >>> async def test_admin_edit_gateway_success():
         ...     response = await admin_edit_gateway(gateway_id, mock_request_success, mock_db, mock_user)
-        ...     return isinstance(response, RedirectResponse) and response.status_code == 303 and "/admin#gateways" in response.headers["location"]
+        ...     return isinstance(response, JSONResponse) and response.status_code == 200 and json.loads(response.body)["success"] is True
         >>>
         >>> asyncio.run(test_admin_edit_gateway_success())
         True
@@ -2482,7 +2482,7 @@ async def admin_edit_gateway(
         )
         await gateway_service.update_gateway(db, gateway_id, gateway)
         return JSONResponse(
-            content={"message": "Gateway registered successfully!", "success": True},
+            content={"message": "Gateway update successfully!", "success": True},
             status_code=200,
         )
     except Exception as ex:
@@ -2497,7 +2497,6 @@ async def admin_edit_gateway(
         if isinstance(ex, IntegrityError):
             return JSONResponse(status_code=409, content=ErrorFormatter.format_database_error(ex))
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
-
 
 @admin_router.post("/gateways/{gateway_id}/delete")
 async def admin_delete_gateway(gateway_id: str, request: Request, db: Session = Depends(get_db), user: str = Depends(require_auth)) -> RedirectResponse:
@@ -2584,7 +2583,6 @@ async def admin_delete_gateway(gateway_id: str, request: Request, db: Session = 
     if is_inactive_checked.lower() == "true":
         return RedirectResponse(f"{root_path}/admin/?include_inactive=true#gateways", status_code=303)
     return RedirectResponse(f"{root_path}/admin#gateways", status_code=303)
-
 
 @admin_router.get("/resources/{uri:path}")
 async def admin_get_resource(uri: str, db: Session = Depends(get_db), user: str = Depends(require_auth)) -> Dict[str, Any]:
