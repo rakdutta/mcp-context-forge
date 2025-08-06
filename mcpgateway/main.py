@@ -321,6 +321,7 @@ async def request_validation_exception_handler(_request: Request, exc: RequestVa
                 ctx_serializable = str(ctx)
             error_detail = {"type": type_, "loc": loc, "msg": msg, "ctx": ctx_serializable}
             error_details.append(error_detail)
+
         response_content = {"detail": error_details}
         return JSONResponse(status_code=422, content=response_content)
     return await fastapi_default_validation_handler(_request, exc)
@@ -1214,25 +1215,15 @@ async def create_tool(tool: ToolCreate, db: Session = Depends(get_db), user: str
     try:
         logger.debug(f"User {user} is creating a new tool")
         return await tool_service.register_tool(db, tool)
-    except Exception as ex:
-        logger.error(f"Error while creating tool: {ex}")
-        if isinstance(ex, ToolNameConflictError):
-            if not ex.enabled and ex.tool_id:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Tool name already exists but is inactive. Consider activating it with ID: {ex.tool_id}",
-                )
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(ex))
-        if isinstance(ex, (ValidationError, ValueError)):
-            logger.error(f"Validation error while creating tool: {ex}")
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=ErrorFormatter.format_validation_error(ex))
-        if isinstance(ex, IntegrityError):
-            logger.error(f"Integrity error while creating tool: {ex}")
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ErrorFormatter.format_database_error(ex))
-        if isinstance(ex, ToolError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ex))
-        logger.error(f"Unexpected error while creating tool: {ex}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while creating the tool")
+    except ToolNameConflictError as e:
+        if not e.enabled and e.tool_id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Tool name already exists but is inactive. Consider activating it with ID: {e.tool_id}",
+            )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except ToolError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @tool_router.get("/{tool_id}", response_model=Union[ToolRead, Dict])
@@ -1296,24 +1287,8 @@ async def update_tool(
     try:
         logger.debug(f"User {user} is updating tool with ID {tool_id}")
         return await tool_service.update_tool(db, tool_id, tool)
-    except Exception as ex:
-        if isinstance(ex, ToolNameConflictError):
-            if not ex.enabled and ex.tool_id:
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"Tool name already exists but is inactive. Consider activating it with ID: {ex.tool_id}",
-                )
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(ex))
-        if isinstance(ex, ValidationError):
-            logger.error(f"Validation error while creating tool: {ex}")
-            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=ErrorFormatter.format_validation_error(ex))
-        if isinstance(ex, IntegrityError):
-            logger.error(f"Integrity error while creating tool: {ex}")
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=ErrorFormatter.format_database_error(ex))
-        if isinstance(ex, ToolError):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ex))
-        logger.error(f"Unexpected error while creating tool: {ex}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while creating the tool")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @tool_router.delete("/{tool_id}")
