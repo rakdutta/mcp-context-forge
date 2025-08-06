@@ -134,7 +134,8 @@ class ErrorFormatter:
         # Log the full error for debugging
         logger.debug(f"Validation error: {error}")
 
-        return {"message": "Validation failed", "details": errors, "success": False}
+        return {"message": f"Validation failed: {user_message}","success": False}
+
 
     @staticmethod
     def _get_user_message(field: str, technical_msg: str) -> str:
