@@ -1873,6 +1873,9 @@ async def delete_prompt(name: str, db: Session = Depends(get_db), user: str = De
 
     Returns:
         Status message.
+
+    Raises:
+        HTTPException: If the prompt is not found, a prompt error occurs, or an unexpected error occurs during deletion.
     """
     logger.debug(f"User: {user} requested deletion of prompt {name}")
     try:

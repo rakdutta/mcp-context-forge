@@ -38,28 +38,26 @@ TODO:
 2. Test with sample MCP server(s) in test scripts
 """
 
-# Standard
+# Standard Library
 import json
 import os
 import tempfile
+import time
+import base64
 from typing import AsyncGenerator
 from unittest.mock import MagicMock, patch
-import base64
-from httpx import AsyncClient
-import time
 
 # Third-Party
-from httpx import AsyncClient
 import pytest
 import pytest_asyncio
+from httpx import AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 # First-Party
 from mcpgateway.db import Base
-
-# Import the app and dependencies
+from mcpgateway.config import settings
 from mcpgateway.main import app, get_db
 
 # pytest.skip("Temporarily disabling this suite", allow_module_level=True)
@@ -85,10 +83,6 @@ def generate_test_jwt():
         token = token.decode("utf-8")
     return token
 
-
-import pytest
-import jwt
-from mcpgateway.config import settings
 
 # Helper function for generating test JWT
 def _generate_test_jwt():
@@ -1534,6 +1528,26 @@ class TestAuthentication:
 # Test Error Handling
 # -------------------------
 class TestErrorHandling:
+    """Test error handling and edge cases."""
+
+    async def test_404_for_invalid_endpoints(self, client: AsyncClient, mock_auth):
+        """Test that invalid endpoints return 404."""
+        response = await client.get("/invalid-endpoint", headers=TEST_AUTH_HEADER)
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Not Found"
+
+    async def test_malformed_json(self, client: AsyncClient, mock_auth):
+        """Test handling of malformed JSON."""
+        response = await client.post("/tools", content=b'{"invalid json', headers={**TEST_AUTH_HEADER, "Content-Type": "application/json"})
+        assert response.status_code == 422
+
+    async def test_empty_request_body(self, client: AsyncClient, mock_auth):
+        """Test handling of empty request body."""
+        response = await client.post("/tools", json={}, headers=TEST_AUTH_HEADER)
+        assert response.status_code == 422
+        # Should have validation errors for required fields
+        errors = response.json()["detail"]
+        assert any("Field required" in str(error) for error in errors)
     async def test_internal_server_error(self, client: AsyncClient, mock_auth):
         """Simulate internal server error by patching a dependency."""
         from mcpgateway.main import app, get_db
@@ -1582,42 +1596,7 @@ class TestErrorHandling:
             assert response.status_code == 200
             result = response.json()
             assert "app" in result or "api" in result
-    # async def test_docs_with_auth(self, client: AsyncClient, mock_auth):
-    #     """Test GET /docs with JWT Bearer token returns 200 (if allowed by config)."""
-    #     print(f"Testing /docs with auth {TEST_AUTH_HEADER}")
-    #     # Ensure the auth header is set correctly
-    #     assert "Authorization" in TEST_AUTH_HEADER
-    #     assert TEST_AUTH_HEADER["Authorization"].startswith("Bearer ")
-
-    #     # Make the request
-    #     response = await client.get("/docs", headers=TEST_AUTH_HEADER)
-    #     assert response.status_code == 200
-
-    # async def test_redoc_with_auth(self, client: AsyncClient, mock_auth):
-    #     """Test GET /redoc with JWT Bearer token returns 200 (if allowed by config)."""
-    #     response = await client.get("/redoc", headers=TEST_AUTH_HEADER)
-    #     assert response.status_code == 200
-    """Test error handling and edge cases."""
-
-    async def test_404_for_invalid_endpoints(self, client: AsyncClient, mock_auth):
-        """Test that invalid endpoints return 404."""
-        response = await client.get("/invalid-endpoint", headers=TEST_AUTH_HEADER)
-        assert response.status_code == 404
-        assert response.json()["detail"] == "Not Found"
-
-    async def test_malformed_json(self, client: AsyncClient, mock_auth):
-        """Test handling of malformed JSON."""
-        response = await client.post("/tools", content=b'{"invalid json', headers={**TEST_AUTH_HEADER, "Content-Type": "application/json"})
-        assert response.status_code == 422
-
-    async def test_empty_request_body(self, client: AsyncClient, mock_auth):
-        """Test handling of empty request body."""
-        response = await client.post("/tools", json={}, headers=TEST_AUTH_HEADER)
-        assert response.status_code == 422
-        # Should have validation errors for required fields
-        errors = response.json()["detail"]
-        assert any("Field required" in str(error) for error in errors)
-
+   
 
 # -------------------------
 # Test Integration Scenarios

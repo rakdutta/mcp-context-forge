@@ -178,9 +178,6 @@ def test_client(app):
     yield client
     app.dependency_overrides.pop(require_auth, None)
 
-
-import jwt
-
 @pytest.fixture
 def mock_jwt_token():
     """Create a valid JWT token for testing."""
@@ -1151,7 +1148,7 @@ class TestMetricsEndpoints:
         """Test resetting metrics for a specific entity type."""
         response = test_client.post("/metrics/reset?entity=tool&entity_id=1", headers=auth_headers)
         assert response.status_code == 200
-        #assert "text/html" in response.headers["content-type"]
+        mock_tool_reset.assert_called_once_with(ANY, 1)
 
     def test_reset_invalid_entity_metrics(self, test_client, auth_headers):
         """Test error handling for invalid entity type in metrics reset."""
@@ -1204,8 +1201,6 @@ class TestErrorHandling:
 
     def test_docs_with_expired_jwt(self, test_client):
         """Test /docs with an expired JWT returns 401."""
-        import jwt
-        import datetime
         expired_payload = {"sub": "test_user", "exp": datetime.datetime.utcnow() - datetime.timedelta(hours=1)}
         from mcpgateway.config import settings
         expired_token = jwt.encode(expired_payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
