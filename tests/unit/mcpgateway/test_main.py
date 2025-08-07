@@ -175,10 +175,15 @@ def test_client(app):
     app.dependency_overrides.pop(require_auth, None)
 
 
+import jwt
+
 @pytest.fixture
 def mock_jwt_token():
-    """Create a mock JWT token (kept for backwards-compat)."""
-    return "123.123.this_is_a_test_token"
+    """Create a valid JWT token for testing."""
+    payload = {"sub": "test_user"}
+    secret = settings.jwt_secret_key
+    algorithm = settings.jwt_algorithm
+    return jwt.encode(payload, secret, algorithm=algorithm)
 
 
 @pytest.fixture
@@ -1235,3 +1240,19 @@ class TestErrorHandling:
         req = {"description": "Missing required name field"}
         response = test_client.post("/tools/", json=req, headers=auth_headers)
         assert response.status_code == 422  # Validation error
+
+    def test_openapi_json_with_auth(self, test_client, auth_headers):
+        """Test GET /openapi.json with authentication returns 200 and OpenAPI spec."""
+        response = test_client.get("/openapi.json", headers=auth_headers)
+        assert response.status_code == 200
+        assert "openapi" in response.json()
+
+    def test_docs_with_auth(self, test_client, auth_headers):
+        """Test GET /docs with authentication returns 200 or redirect."""
+        response = test_client.get("/docs", headers=auth_headers)
+        assert response.status_code == 200
+
+    def test_redoc_with_auth(self, test_client, auth_headers):
+        """Test GET /redoc with authentication returns 200 or redirect."""
+        response = test_client.get("/redoc", headers=auth_headers)
+        assert response.status_code == 200
