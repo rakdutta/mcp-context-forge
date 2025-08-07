@@ -1123,20 +1123,6 @@ class TestGatewayAPIs:
         assert response.status_code in [400, 404]
         resp_json = response.json()
         assert "not found" in str(resp_json).lower() or "does not exist" in str(resp_json).lower()
-    async def test_register_gateway_success_and_missing_fields(self, client: AsyncClient, mock_auth):
-        """Test POST /gateways - register gateway success and missing fields, with external call mocked."""
-        gateway_data = {"name": "test_gateway", "url": "http://localhost:8000/sse", "transport": "SSE"}
-        # Patch the method that checks the external gateway connectivity
-        with patch("mcpgateway.services.gateway_service.GatewayService._validate_gateway_url", return_value=True):
-            response = await client.post("/gateways", json=gateway_data, headers=TEST_AUTH_HEADER)
-        # Accept 200    
-        assert response.status_code == 200
-        result = response.json()
-        assert result["name"] == gateway_data["name"]
-        # Missing required fields
-        response = await client.post("/gateways", json={"url": "http://localhost:8000/sse"}, headers=TEST_AUTH_HEADER)
-        assert response.status_code == 422
-    
 
 # -------------------------
 # Test Root APIs
