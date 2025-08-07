@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Copyright 2025
@@ -11,11 +12,14 @@ Comprehensive tests for the main API endpoints with full coverage.
 from copy import deepcopy
 import json
 import os
+import datetime
 from unittest.mock import ANY, MagicMock, patch
 
 # Third-Party
-from fastapi.testclient import TestClient
 import pytest
+import jwt
+from fastapi.testclient import TestClient
+
 
 # First-Party
 from mcpgateway.config import settings

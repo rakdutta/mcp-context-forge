@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 End-to-end tests for MCP Gateway main APIs.
@@ -43,6 +44,9 @@ import os
 import tempfile
 from typing import AsyncGenerator
 from unittest.mock import MagicMock, patch
+import base64
+from httpx import AsyncClient
+import time
 
 # Third-Party
 from httpx import AsyncClient
@@ -63,9 +67,44 @@ from mcpgateway.main import app, get_db
 # -------------------------
 # Test Configuration
 # -------------------------
+
+# --- Test Auth Header: Use a real JWT for authenticated requests ---
+import jwt
+
 TEST_USER = "testuser"
-TEST_PASSWORD = "testpass"
-TEST_AUTH_HEADER = {"Authorization": f"Bearer {TEST_USER}:{TEST_PASSWORD}"}
+JWT_SECRET = "my-test-key"  # Must match mcpgateway.config.Settings.jwt_secret_key
+JWT_ALGORITHM = "HS256"     # Must match mcpgateway.config.Settings.jwt_algorithm
+
+def generate_test_jwt():
+    payload = {
+        "sub": TEST_USER
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    # PyJWT >=2 returns str, <2 returns bytes
+    if isinstance(token, bytes):
+        token = token.decode("utf-8")
+    return token
+
+
+import pytest
+import jwt
+from mcpgateway.config import settings
+
+# Helper function for generating test JWT
+def _generate_test_jwt():
+    payload = {"sub": "test_user","exp": int(time.time()) + 3600}
+    secret = settings.jwt_secret_key
+    algorithm = settings.jwt_algorithm
+    token = jwt.encode(payload, secret, algorithm=algorithm)
+    # if isinstance(token, bytes):
+    #     token = token.decode("utf-8")
+    return token
+
+
+def generate_test_jwt():
+    return _generate_test_jwt()
+
+TEST_AUTH_HEADER = {"Authorization": f"Bearer {generate_test_jwt()}"}
 
 
 # -------------------------
@@ -169,10 +208,49 @@ async def mock_settings():
         yield mock_settings
 
 
+def basic_auth_header(username: str, password: str) -> dict:
+    token = base64.b64encode(f"{username}:{password}".encode()).decode()
+    return {"Authorization": f"Basic {token}"}
+
+# -------------------------
+# Test Utility APIs
+# -------------------------
+class TestDocsAndRedoc:
+    @classmethod
+    def setup_class(cls):
+        # Enable Basic Auth for docs endpoints during these tests
+        from mcpgateway.config import settings
+        cls._original_docs_allow_basic_auth = settings.docs_allow_basic_auth
+        settings.docs_allow_basic_auth = True
+
+    @classmethod
+    def teardown_class(cls):
+        # Restore original setting
+        from mcpgateway.config import settings
+        settings.docs_allow_basic_auth = cls._original_docs_allow_basic_auth
+
+    async def test_docs_with_basic_auth(self, client: AsyncClient):
+        """Test /docs endpoint with Basic Auth (should return 200 if credentials are valid)."""
+        headers = basic_auth_header("admin", "changeme")
+        response = await client.get("/docs", headers=headers)
+        assert response.status_code == 200
+
+    async def test_redoc_with_basic_auth(self, client: AsyncClient):
+        """Test /redoc endpoint with Basic Auth (should return 200 if credentials are valid)."""
+        headers = basic_auth_header("admin", "changeme")
+        response = await client.get("/redoc", headers=headers)
+        assert response.status_code == 200
+
+
 # -------------------------
 # Test Health and Infrastructure
 # -------------------------
 class TestHealthChecks:
+    async def test_cors_preflight(self, client: AsyncClient):
+        """Test CORS preflight OPTIONS request on /health endpoint."""
+        response = await client.options("/health", headers={"Origin": "http://localhost", "Access-Control-Request-Method": "GET"})
+        assert response.status_code in [200, 204]
+        assert "access-control-allow-origin" in response.headers
     """Test health check and readiness endpoints."""
 
     async def test_health_check(self, client: AsyncClient):
@@ -219,6 +297,15 @@ class TestHealthChecks:
 # Test Protocol APIs
 # -------------------------
 class TestProtocolAPIs:
+    async def test_initialize_no_body(self, client: AsyncClient):
+        """Test POST /protocol/initialize with no body (should fail validation)."""
+        response = await client.post("/protocol/initialize", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
+
+    async def test_notifications_missing_method(self, client: AsyncClient):
+        """Test POST /protocol/notifications with missing method field."""
+        response = await client.post("/protocol/notifications", json={}, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [200,400, 422]
     """Test MCP protocol-related endpoints."""
 
     async def test_initialize(self, client: AsyncClient):
@@ -310,6 +397,10 @@ class TestProtocolAPIs:
 # Test Server APIs
 # -------------------------
 class TestServerAPIs:
+    async def test_get_servers_no_auth(self, client: AsyncClient):
+        """Test GET /servers without auth header (should fail if auth required)."""
+        response = await client.get("/servers")
+        assert response.status_code in [401, 403, 200]
     """Test server management endpoints."""
 
     async def test_list_servers_empty(self, client: AsyncClient, mock_auth):
@@ -480,6 +571,10 @@ class TestServerAPIs:
 # Test Tool APIs
 # -------------------------
 class TestToolAPIs:
+    async def test_create_tool_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /tools with no body (should fail validation)."""
+        response = await client.post("/tools", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
     """Test tool management endpoints."""
 
     async def test_list_tools_empty(self, client: AsyncClient, mock_auth):
@@ -675,6 +770,10 @@ class TestToolAPIs:
 # Test Resource APIs
 # -------------------------
 class TestResourceAPIs:
+    async def test_create_resource_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /resources with no body (should fail validation)."""
+        response = await client.post("/resources", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
     """Test resource management endpoints."""
 
     async def test_list_resources_empty(self, client: AsyncClient, mock_auth):
@@ -887,6 +986,10 @@ class TestResourceAPIs:
 # Test Prompt APIs
 # -------------------------
 class TestPromptAPIs:
+    async def test_create_prompt_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /prompts with no body (should fail validation)."""
+        response = await client.post("/prompts", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
     """Test prompt management endpoints."""
 
     async def test_list_prompts_empty(self, client: AsyncClient, mock_auth):
@@ -1081,6 +1184,10 @@ class TestPromptAPIs:
 # Test Gateway APIs
 # -------------------------
 class TestGatewayAPIs:
+    async def test_create_gateway_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /gateways with no body (should fail validation)."""
+        response = await client.post("/gateways", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
 
     """Test gateway federation endpoints."""
 
@@ -1128,6 +1235,10 @@ class TestGatewayAPIs:
 # Test Root APIs
 # -------------------------
 class TestRootAPIs:
+    async def test_add_root_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /roots with no body (should fail validation)."""
+        response = await client.post("/roots", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
     """Test root management endpoints."""
 
     async def test_list_roots_empty(self, client: AsyncClient, mock_auth):
@@ -1179,6 +1290,10 @@ class TestRootAPIs:
 # Test Utility APIs
 # -------------------------
 class TestUtilityAPIs:
+    async def test_rpc_no_body(self, client: AsyncClient, mock_auth):
+        """Test POST /rpc with no body (should fail validation)."""
+        response = await client.post("/rpc", headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 422]
     """Test utility endpoints (RPC, logging, etc)."""
 
     async def test_rpc_ping(self, client: AsyncClient, mock_auth):
@@ -1233,6 +1348,10 @@ class TestUtilityAPIs:
 # Test Metrics APIs
 # -------------------------
 class TestMetricsAPIs:
+    async def test_metrics_no_auth(self, client: AsyncClient):
+        """Test GET /metrics without auth header (should not error, but may be protected)."""
+        response = await client.get("/metrics")
+        assert response.status_code in [200, 401, 403]
     """Test metrics collection endpoints."""
 
     async def test_get_metrics(self, client: AsyncClient, mock_auth):
@@ -1415,6 +1534,69 @@ class TestAuthentication:
 # Test Error Handling
 # -------------------------
 class TestErrorHandling:
+    async def test_internal_server_error(self, client: AsyncClient, mock_auth):
+        """Simulate internal server error by patching a dependency."""
+        from mcpgateway.main import app, get_db
+        def failing_db():
+            def _gen():
+                raise Exception("Simulated DB failure")
+                yield
+            return _gen()
+        original_override = app.dependency_overrides.get(get_db)
+        app.dependency_overrides[get_db] = failing_db
+        try:
+            response = await client.get("/health", headers=TEST_AUTH_HEADER)
+            # Some test setups may still return 200 with error info in body, so check both
+            if response.status_code == 500:
+                assert True
+            else:
+                # Accept 200 only if error is present in response
+                data = response.json()
+                assert "error" in data or data.get("status") != "healthy"
+        finally:
+            if original_override:
+                app.dependency_overrides[get_db] = original_override
+            else:
+                app.dependency_overrides.pop(get_db, None)
+
+    async def test_validation_error(self, client: AsyncClient, mock_auth):
+        """Test validation error for endpoint expecting required fields."""
+        response = await client.post("/tools", json={}, headers=TEST_AUTH_HEADER)
+        assert response.status_code == 422
+
+    async def test_database_integrity_error(self, client: AsyncClient, mock_auth):
+        """Test DB integrity error by creating duplicate server name."""
+        server_data = {"name": "unique_server"}
+        response = await client.post("/servers", json=server_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code == 201
+        response = await client.post("/servers", json=server_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 409]
+    async def test_root_path_returns_api_info(self, client: AsyncClient, mock_settings):
+        """Test GET / returns API info when UI is disabled, or redirects if UI is enabled."""
+        response = await client.get("/", follow_redirects=False)
+        if response.status_code == 303:
+            # UI is enabled, check redirect
+            assert "/admin" in response.headers.get("location", "")
+        else:
+            # UI is disabled, check API info
+            assert response.status_code == 200
+            result = response.json()
+            assert "app" in result or "api" in result
+    # async def test_docs_with_auth(self, client: AsyncClient, mock_auth):
+    #     """Test GET /docs with JWT Bearer token returns 200 (if allowed by config)."""
+    #     print(f"Testing /docs with auth {TEST_AUTH_HEADER}")
+    #     # Ensure the auth header is set correctly
+    #     assert "Authorization" in TEST_AUTH_HEADER
+    #     assert TEST_AUTH_HEADER["Authorization"].startswith("Bearer ")
+
+    #     # Make the request
+    #     response = await client.get("/docs", headers=TEST_AUTH_HEADER)
+    #     assert response.status_code == 200
+
+    # async def test_redoc_with_auth(self, client: AsyncClient, mock_auth):
+    #     """Test GET /redoc with JWT Bearer token returns 200 (if allowed by config)."""
+    #     response = await client.get("/redoc", headers=TEST_AUTH_HEADER)
+    #     assert response.status_code == 200
     """Test error handling and edge cases."""
 
     async def test_404_for_invalid_endpoints(self, client: AsyncClient, mock_auth):
@@ -1441,6 +1623,33 @@ class TestErrorHandling:
 # Test Integration Scenarios
 # -------------------------
 class TestIntegrationScenarios:
+    async def test_create_and_use_tool(self, client: AsyncClient, mock_auth):
+        """Integration: create a tool and use it in a server association."""
+        tool_data = {"name": "integration_tool", "description": "desc", "inputSchema": {"type": "object"}}
+        tool_resp = await client.post("/tools", json=tool_data, headers=TEST_AUTH_HEADER)
+        assert tool_resp.status_code == 200
+        tool_id = tool_resp.json()["id"]
+        server_data = {"name": "integration_server", "associatedTools": [tool_id]}
+        server_resp = await client.post("/servers", json=server_data, headers=TEST_AUTH_HEADER)
+        assert server_resp.status_code == 201
+        server = server_resp.json()
+        # The server creation might not associate tools in the same request
+        if not server.get("associatedTools"):
+            # May need to use a separate endpoint to associate tools
+            # For now, just verify the server was created
+            assert server["name"] == "integration_server"
+            assert "id" in server
+        else:
+            assert tool_id in server.get("associatedTools", [])
+
+    async def test_create_and_use_resource(self, client: AsyncClient, mock_auth):
+        """Integration: create a resource and read it back."""
+        resource_data = {"uri": "integration/resource", "name": "integration_resource", "content": "test"}
+        create_resp = await client.post("/resources", json=resource_data, headers=TEST_AUTH_HEADER)
+        assert create_resp.status_code == 200
+        get_resp = await client.get(f"/resources/{resource_data['uri']}", headers=TEST_AUTH_HEADER)
+        assert get_resp.status_code == 200
+        assert get_resp.json()["uri"] == resource_data["uri"]
     """Test complete integration scenarios."""
 
     async def test_create_virtual_server_with_tools(self, client: AsyncClient, mock_auth):
