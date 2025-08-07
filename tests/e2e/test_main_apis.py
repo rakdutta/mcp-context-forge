@@ -765,7 +765,7 @@ class TestResourceAPIs:
         response = await client.get(f"/resources/{resource_data['uri']}", headers=TEST_AUTH_HEADER)
         assert response.status_code == 404
 
-    # FIXME: API should probably return 409 instead of 400 for non-existent resource
+    #API should probably return 409 instead of 400 for non-existent resource
     async def test_resource_uri_conflict(self, client: AsyncClient, mock_auth):
         """Test creating resource with duplicate URI."""
         resource_data = {"uri": "duplicate/resource", "name": "duplicate", "content": "test"}
@@ -776,13 +776,13 @@ class TestResourceAPIs:
 
         # Try to create duplicate
         response = await client.post("/resources", json=resource_data, headers=TEST_AUTH_HEADER)
-        assert response.status_code in [400, 409]
+        assert response.status_code == 409
         resp_json = response.json()
         if "message" in resp_json:
             assert "already exists" in resp_json["message"]
         else:
             # Accept any error format as long as status is correct
-            assert response.status_code in [400, 409]
+            assert response.status_code == 409
 
 
 # -------------------------
@@ -1374,6 +1374,57 @@ class TestIntegrationScenarios:
         # Verify deletion
         final_response = await client.get(f"/resources/{resource_data['uri']}", headers=TEST_AUTH_HEADER)
         assert final_response.status_code == 404
+
+# # Additional tests for new exception handling in update_gateways, update_prompt, update_tool, create_tool, create_prompt
+
+class TestNewExceptionCases:
+    async def test_update_gateway_invalid_id(self, client: AsyncClient, mock_auth):
+        """Test PUT /gateways/{gateway_id} with invalid/non-existent ID returns 404 or 400."""
+        fake_id = "non-existent-gateway-id"
+        response = await client.put(f"/gateways/{fake_id}", json={"url": "http://example.com", "transport": "SSE"}, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 404]
+        resp_json = response.json()
+        assert "not found" in str(resp_json).lower() or "does not exist" in str(resp_json).lower()
+
+    async def test_update_prompt_not_found(self, client: AsyncClient, mock_auth):
+        """Test PUT /prompts/{name} with non-existent prompt returns 404 or 400."""
+        fake_name = "nonexistent_prompt"
+        response = await client.put(f"/prompts/{fake_name}", json={"description": "desc"}, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 404]
+        resp_json = response.json()
+        assert "not found" in str(resp_json).lower() or "does not exist" in str(resp_json).lower()
+
+    async def test_update_tool_not_found(self, client: AsyncClient, mock_auth):
+        """Test PUT /tools/{tool_id} with non-existent tool returns 404 or 400."""
+        fake_id = "non-existent-tool-id"
+        response = await client.put(f"/tools/{fake_id}", json={"description": "desc"}, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 404]
+        resp_json = response.json()
+        assert "not found" in str(resp_json).lower() or "does not exist" in str(resp_json).lower()
+
+    async def test_create_tool_duplicate_name(self, client: AsyncClient, mock_auth):
+        """Test POST /tools with duplicate name returns 409 or 400."""
+        tool_data = {"name": "duplicate_tool_case", "description": "desc"}
+        # Create first tool
+        response = await client.post("/tools", json=tool_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code == 200
+        # Try to create duplicate
+        response = await client.post("/tools", json=tool_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 409]
+        resp_json = response.json()
+        assert "already exists" in str(resp_json).lower()
+
+    async def test_create_prompt_duplicate_name(self, client: AsyncClient, mock_auth):
+        """Test POST /prompts with duplicate name returns 409 or 400."""
+        prompt_data = {"name": "duplicate_prompt_case", "template": "Test", "arguments": []}
+        # Create first prompt
+        response = await client.post("/prompts", json=prompt_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code == 200
+        # Try to create duplicate
+        response = await client.post("/prompts", json=prompt_data, headers=TEST_AUTH_HEADER)
+        assert response.status_code in [400, 409]
+        resp_json = response.json()
+        assert "already exists" in str(resp_json).lower()
 
 
 # Run tests with pytest
