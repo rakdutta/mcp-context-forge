@@ -932,8 +932,9 @@ class TestPromptAPIs:
         response = await client.post("/prompts", json=prompt_data, headers=TEST_AUTH_HEADER)
         assert response.status_code == 409
         resp_json = response.json()
+        print(f"Response JSON: {resp_json}")
         if "detail" in resp_json:
-            assert "already exists" in resp_json["detail"]
+            assert "already exists" in resp_json["detail"]["message"]
         elif "message" in resp_json:
             assert "already exists" in resp_json["message"]
         else:
