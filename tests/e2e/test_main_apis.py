@@ -1081,6 +1081,7 @@ class TestPromptAPIs:
 # Test Gateway APIs
 # -------------------------
 class TestGatewayAPIs:
+
     """Test gateway federation endpoints."""
 
     async def test_list_gateways_empty(self, client: AsyncClient, mock_auth):
@@ -1123,7 +1124,6 @@ class TestGatewayAPIs:
         assert response.status_code in [400, 404]
         resp_json = response.json()
         assert "not found" in str(resp_json).lower() or "does not exist" in str(resp_json).lower()
-
 # -------------------------
 # Test Root APIs
 # -------------------------

@@ -1885,7 +1885,7 @@ async def delete_prompt(name: str, db: Session = Depends(get_db), user: str = De
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         logger.error(f"Unexpected error while deleting prompt {name}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while deleting the prompt")
-    
+
     # except PromptNotFoundError as e:
     #     return {"status": "error", "message": str(e)}
     # except PromptError as e:
