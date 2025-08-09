@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 # -*- coding: utf-8 -*-
 """
@@ -1596,7 +1597,7 @@ class TestErrorHandling:
             assert response.status_code == 200
             result = response.json()
             assert "app" in result or "api" in result
-   
+
 
 # -------------------------
 # Test Integration Scenarios
