@@ -185,7 +185,7 @@ class TestGatewayService:
         monkeypatch.setattr(
             "mcpgateway.services.gateway_service.GatewayRead.model_validate",
             lambda x: mock_model,
-        ) 
+        )
 
         gateway_create = GatewayCreate(
             name="test_gateway",
@@ -272,7 +272,7 @@ class TestGatewayService:
                 [],
             )
         )
-        
+
         gateway_service._notify_gateway_added = AsyncMock()
 
         mock_model = Mock()
