@@ -5102,10 +5102,8 @@ async function handleGatewayFormSubmit(e) {
                 body: formData,
             },
         );
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
         const result = await response.json();
+
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add gateway");
         } else {
@@ -5168,9 +5166,6 @@ async function handleResourceFormSubmit(e) {
                 body: formData,
             },
         );
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add Resource");
@@ -5229,10 +5224,6 @@ async function handlePromptFormSubmit(e) {
                 body: formData,
             },
         );
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add prompt");
@@ -5287,9 +5278,6 @@ async function handleEditPromptFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
 
         const result = await response.json();
         if (!result || !result.success) {
@@ -5343,11 +5331,6 @@ async function handleServerFormSubmit(e) {
                 redirect: "manual",
             },
         );
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
-
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add server.");
@@ -5430,10 +5413,6 @@ async function handleToolFormSubmit(event) {
                 body: formData,
             },
         );
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
-
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add tool");
@@ -5487,10 +5466,6 @@ async function handleEditToolFormSubmit(event) {
             body: formData,
             headers: { "X-Requested-With": "XMLHttpRequest" },
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
 
         const result = await response.json();
         if (!result || !result.success) {
@@ -5556,9 +5531,6 @@ async function handleEditGatewayFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit gateway");
@@ -5603,10 +5575,6 @@ async function handleEditServerFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit server");
@@ -5662,10 +5630,6 @@ async function handleEditResFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
 
         const result = await response.json();
         if (!result || !result.success) {
