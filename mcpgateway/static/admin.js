@@ -5104,8 +5104,8 @@ async function handleGatewayFormSubmit(e) {
         );
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result || !result.success) {
+            throw new Error(result?.message || "Failed to add gateway");
         } else {
             const redirectUrl = isInactiveCheckedBool
                 ? `${window.ROOT_PATH}/admin?include_inactive=true#gateways`
@@ -5168,8 +5168,8 @@ async function handleResourceFormSubmit(e) {
         );
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result || !result.success) {
+            throw new Error(result?.message || "Failed to add Resource");
         } else {
             const redirectUrl = isInactiveCheckedBool
                 ? `${window.ROOT_PATH}/admin?include_inactive=true#resources`
@@ -5227,8 +5227,8 @@ async function handlePromptFormSubmit(e) {
         );
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to add prompt");
         }
         // Only redirect on success
         const redirectUrl = isInactiveCheckedBool
@@ -5282,8 +5282,8 @@ async function handleEditPromptFormSubmit(e) {
         });
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to edit Prompt");
         }
         // Only redirect on success
         const redirectUrl = isInactiveCheckedBool
@@ -5335,7 +5335,7 @@ async function handleServerFormSubmit(e) {
         );
 
         const result = await response.json();
-        if (!result.success) {
+        if (!result ||!result.success) {
             throw new Error(result?.message || "Failed to add server.");
         } else {
             // Success redirect
@@ -5418,8 +5418,8 @@ async function handleToolFormSubmit(event) {
         );
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to add tool");
         } else {
             const redirectUrl = isInactiveCheckedBool
                 ? `${window.ROOT_PATH}/admin?include_inactive=true#tools`
@@ -5470,11 +5470,9 @@ async function handleEditToolFormSubmit(event) {
             body: formData,
             headers: { "X-Requested-With": "XMLHttpRequest" },
         });
-        console.log("response:", response);
         const result = await response.json();
-        console.log("result edit tool form:", result);
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to edit tool");
         } else {
             const redirectUrl = isInactiveCheckedBool
                 ? `${window.ROOT_PATH}/admin?include_inactive=true#tools`
@@ -5538,8 +5536,8 @@ async function handleEditGatewayFormSubmit(e) {
         });
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to edit gateway");
         }
         // Only redirect on success
         const redirectUrl = isInactiveCheckedBool
@@ -5583,8 +5581,8 @@ async function handleEditServerFormSubmit(e) {
         });
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to edit server");
         }
         // Only redirect on success
         else {
@@ -5639,8 +5637,8 @@ async function handleEditResFormSubmit(e) {
         });
 
         const result = await response.json();
-        if (!result.success) {
-            throw new Error(result?.message || "An error occurred");
+        if (!result ||!result.success) {
+            throw new Error(result?.message || "Failed to edit resource");
         }
         // Only redirect on success
         else {
