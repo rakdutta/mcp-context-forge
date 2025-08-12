@@ -5102,11 +5102,9 @@ async function handleGatewayFormSubmit(e) {
                 body: formData,
             },
         );
-        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
-        
         const result = await response.json();
         if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add gateway");
@@ -5170,7 +5168,6 @@ async function handleResourceFormSubmit(e) {
                 body: formData,
             },
         );
-        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
@@ -5237,7 +5234,7 @@ async function handlePromptFormSubmit(e) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add prompt");
         }
         // Only redirect on success
@@ -5290,13 +5287,12 @@ async function handleEditPromptFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
 
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit Prompt");
         }
         // Only redirect on success
@@ -5353,7 +5349,7 @@ async function handleServerFormSubmit(e) {
         }
 
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add server.");
         } else {
             // Success redirect
@@ -5434,13 +5430,12 @@ async function handleToolFormSubmit(event) {
                 body: formData,
             },
         );
-        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
 
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to add tool");
         } else {
             const redirectUrl = isInactiveCheckedBool
@@ -5498,8 +5493,7 @@ async function handleEditToolFormSubmit(event) {
         }
 
         const result = await response.json();
-        
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit tool");
         } else {
             const redirectUrl = isInactiveCheckedBool
@@ -5562,12 +5556,11 @@ async function handleEditGatewayFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit gateway");
         }
         // Only redirect on success
@@ -5610,12 +5603,12 @@ async function handleEditServerFormSubmit(e) {
             method: "POST",
             body: formData,
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         }
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit server");
         }
         // Only redirect on success
@@ -5675,7 +5668,7 @@ async function handleEditResFormSubmit(e) {
         }
 
         const result = await response.json();
-        if (!result ||!result.success) {
+        if (!result || !result.success) {
             throw new Error(result?.message || "Failed to edit resource");
         }
         // Only redirect on success
