@@ -6214,6 +6214,7 @@ function setupTabNavigation() {
         "gateways",
         "roots",
         "metrics",
+        "logs",
         "version-info",
     ];
 
