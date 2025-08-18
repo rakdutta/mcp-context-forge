@@ -1960,13 +1960,7 @@ async function editTool(toolId) {
         if (typeField) {
             typeField.value = tool.integrationType || "MCP";
         }
-        if (urlField) {
-            if (typeField.value === 'MCP') {
-                urlField.readOnly = true;
-            } else {
-                urlField.readOnly = false;
-            }
-        }
+        
 
         // Set tags field
         const tagsField = safeGetElement("edit-tool-tags");
@@ -2009,7 +2003,21 @@ async function editTool(toolId) {
                 2,
             );
         }
-
+        // readonly incase of integration_type ="MCP"
+        if (typeField.value === 'MCP') {
+            if (urlField) urlField.readOnly = true;
+            if (headersField) headersField.setAttribute('readonly', 'readonly');
+            if (schemaField) schemaField.setAttribute('readonly', 'readonly');
+            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', true);
+            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', true);
+        } else {
+            if (urlField) urlField.readOnly = false;
+            if (headersField) headersField.removeAttribute('readonly');
+            if (schemaField) schemaField.removeAttribute('readonly');
+            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', false);
+            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', false);
+        }
+        
         // Update CodeMirror editors if they exist
         if (window.editToolHeadersEditor && headersValidation.valid) {
             window.editToolHeadersEditor.setValue(
