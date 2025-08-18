@@ -2003,20 +2003,7 @@ async function editTool(toolId) {
                 2,
             );
         }
-        // readonly incase of integration_type ="MCP"
-        if (typeField.value === 'MCP') {
-            if (urlField) urlField.readOnly = true;
-            if (headersField) headersField.setAttribute('readonly', 'readonly');
-            if (schemaField) schemaField.setAttribute('readonly', 'readonly');
-            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', true);
-            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', true);
-        } else {
-            if (urlField) urlField.readOnly = false;
-            if (headersField) headersField.removeAttribute('readonly');
-            if (schemaField) schemaField.removeAttribute('readonly');
-            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', false);
-            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', false);
-        }
+        
         
         // Update CodeMirror editors if they exist
         if (window.editToolHeadersEditor && headersValidation.valid) {
@@ -2031,18 +2018,21 @@ async function editTool(toolId) {
             );
             window.editToolSchemaEditor.refresh();
         }
-
+        console.log(`Integration type: ${typeField.value}`);
+        console.log(`tool.integrationType: ${tool.integrationType}`);
         // Prefill integration type from DB and set request types accordingly
         if (typeField) {
-            typeField.value = tool.integrationType || "REST";
+            // Always set value from DB, never from previous UI state
+            typeField.value = tool.integrationType;
             // Disable integration type field for MCP tools (cannot be changed)
             if (tool.integrationType === "MCP") {
                 typeField.disabled = true;
             } else {
                 typeField.disabled = false;
             }
-            updateEditToolRequestTypes(tool.requestType || null); // preselect from DB
-            updateEditToolUrl(tool.url||null);
+            // Update request types and URL field
+            updateEditToolRequestTypes(tool.requestType || null);
+            updateEditToolUrl(tool.url || null);
         }
 
         // Request Type field handling (disable for MCP)
@@ -2062,7 +2052,37 @@ async function editTool(toolId) {
         if (authTypeField) {
             authTypeField.value = tool.auth?.authType || "";
         }
-
+        const editAuthTokenField = safeGetElement('edit-auth-token');
+        // readonly incase of integration_type ="MCP"
+        if (typeField.value === 'MCP') {
+            if (urlField) urlField.readOnly = true;
+            if (headersField) headersField.setAttribute('readonly', 'readonly');
+            if (schemaField) schemaField.setAttribute('readonly', 'readonly');
+            if (authTypeField) {
+                if (authTypeField.tagName === 'SELECT') {
+                    authTypeField.readOnly = true;
+                } else {
+                    authTypeField.setAttribute('readonly', 'readonly');
+                }
+            }
+            if (editAuthTokenField) editAuthTokenField.setAttribute('readonly', 'readonly');
+            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', true);
+            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', true);
+        } else {
+            if (urlField) urlField.readOnly = false;
+            if (headersField) headersField.removeAttribute('readonly');
+            if (schemaField) schemaField.removeAttribute('readonly');
+            if (authTypeField) {
+                if (authTypeField.tagName === 'SELECT') {
+                    authTypeField.readOnly = false;
+                } else {
+                    authTypeField.removeAttribute('readonly');
+                }
+            }
+            if (editAuthTokenField) editAuthTokenField.removeAttribute('readonly');
+            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', false);
+            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', false);
+        }
         // Auth containers
         const authBasicSection = safeGetElement("edit-auth-basic-fields");
         const authBearerSection = safeGetElement("edit-auth-bearer-fields");
@@ -3660,26 +3680,26 @@ function updateEditToolRequestTypes(selectedMethod = null) {
     const prevType = editToolTypeSelect.dataset.prevValue;
     const selectedType = editToolTypeSelect.value;
     // Only block changing REST to MCP
-    if (prevType === 'REST' && selectedType === 'MCP') {
-        alert('You cannot change integration type from REST to MCP.');
-        editToolTypeSelect.value = prevType;
-        // Restore request type dropdown to previous enabled state and value
-        const allowedMethods = integrationRequestMap[prevType] || [];
-        editToolRequestTypeSelect.disabled = false;
-        editToolRequestTypeSelect.innerHTML = "";
-        allowedMethods.forEach((method) => {
-            const option = document.createElement("option");
-            option.value = method;
-            option.textContent = method;
-            editToolRequestTypeSelect.appendChild(option);
-        });
-        if (selectedMethod && allowedMethods.includes(selectedMethod)) {
-            editToolRequestTypeSelect.value = selectedMethod;
-        }
-        return;
-    } else {
-        editToolTypeSelect.dataset.prevValue = selectedType;
-    }
+    // if (prevType === 'REST' && selectedType === 'MCP') {
+    //     alert('You cannot change integration type from REST to MCP.');
+    //     editToolTypeSelect.value = prevType;
+    //     // Restore request type dropdown to previous enabled state and value
+    //     const allowedMethods = integrationRequestMap[prevType] || [];
+    //     editToolRequestTypeSelect.disabled = false;
+    //     editToolRequestTypeSelect.innerHTML = "";
+    //     allowedMethods.forEach((method) => {
+    //         const option = document.createElement("option");
+    //         option.value = method;
+    //         option.textContent = method;
+    //         editToolRequestTypeSelect.appendChild(option);
+    //     });
+    //     if (selectedMethod && allowedMethods.includes(selectedMethod)) {
+    //         editToolRequestTypeSelect.value = selectedMethod;
+    //     }
+    //     return;
+    // } else {
+    //     editToolTypeSelect.dataset.prevValue = selectedType;
+    // }
 
     const allowedMethods = integrationRequestMap[selectedType] || [];
 
