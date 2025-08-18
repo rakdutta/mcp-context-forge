@@ -2221,7 +2221,6 @@ async def admin_edit_tool(
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
     }
-    logger.info(f"tool_data:{tool_data}")
     # Only include integration_type if it's provided (not disabled in form)
     if "integrationType" in form:
         tool_data["integration_type"] = form.get("integrationType")

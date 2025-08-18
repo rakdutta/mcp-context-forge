@@ -2054,85 +2054,54 @@ async function editTool(toolId) {
         if (authTypeField) {
             authTypeField.value = tool.auth?.authType || "";
         }
-        const editAuthTokenField = safeGetElement("edit-auth-token");
-        // Prefill integration type from DB and set request types accordingly
+        const editAuthTokenField = safeGetElement('edit-auth-token');
+         // Prefill integration type from DB and set request types accordingly
         if (typeField) {
             // Always set value from DB, never from previous UI state
             typeField.value = tool.integrationType;
             // Remove any previous hidden field for type
-            const prevHiddenType = document.getElementById(
-                "hidden-edit-tool-type",
-            );
-            if (prevHiddenType) {
-                prevHiddenType.remove();
-            }
+            const prevHiddenType = document.getElementById('hidden-edit-tool-type');
+            if (prevHiddenType) prevHiddenType.remove();
             // Remove any previous hidden field for authType
-            const prevHiddenAuthType = document.getElementById(
-                "hidden-edit-auth-type",
-            );
-            if (prevHiddenAuthType) {
-                prevHiddenAuthType.remove();
-            }
+            const prevHiddenAuthType = document.getElementById('hidden-edit-auth-type');
+            if (prevHiddenAuthType) prevHiddenAuthType.remove();
             // Disable integration type field for MCP tools (cannot be changed)
             if (tool.integrationType === "MCP") {
                 typeField.disabled = true;
                 if (authTypeField) {
                     authTypeField.disabled = true;
                     // Add hidden field for authType
-                    const hiddenAuthTypeField = document.createElement("input");
-                    hiddenAuthTypeField.type = "hidden";
+                    const hiddenAuthTypeField = document.createElement('input');
+                    hiddenAuthTypeField.type = 'hidden';
                     hiddenAuthTypeField.name = authTypeField.name;
                     hiddenAuthTypeField.value = authTypeField.value;
-                    hiddenAuthTypeField.id = "hidden-edit-auth-type";
+                    hiddenAuthTypeField.id = 'hidden-edit-auth-type';
                     authTypeField.form.appendChild(hiddenAuthTypeField);
                 }
-                if (urlField) {
-                    urlField.readOnly = true;
-                }
-                if (headersField) {
-                    headersField.setAttribute("readonly", "readonly");
-                }
-                if (schemaField) {
-                    schemaField.setAttribute("readonly", "readonly");
-                }
-                if (editAuthTokenField) {
-                    editAuthTokenField.setAttribute("readonly", "readonly");
-                }
-                if (window.editToolHeadersEditor) {
-                    window.editToolHeadersEditor.setOption("readOnly", true);
-                }
-                if (window.editToolSchemaEditor) {
-                    window.editToolSchemaEditor.setOption("readOnly", true);
-                }
+                if (urlField) urlField.readOnly = true;
+                if (headersField) headersField.setAttribute('readonly', 'readonly');
+                if (schemaField) schemaField.setAttribute('readonly', 'readonly');
+                if (editAuthTokenField) editAuthTokenField.setAttribute('readonly', 'readonly');
+                if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', true);
+                if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', true);
+            
             } else {
                 typeField.disabled = false;
-                if (authTypeField) {
-                    authTypeField.disabled = false;
-                }
-                if (urlField) {
-                    urlField.readOnly = false;
-                }
-                if (headersField) {
-                    headersField.removeAttribute("readonly");
-                }
-                if (schemaField) {
-                    schemaField.removeAttribute("readonly");
-                }
-                if (editAuthTokenField) {
-                    editAuthTokenField.removeAttribute("readonly");
-                }
-                if (window.editToolHeadersEditor) {
-                    window.editToolHeadersEditor.setOption("readOnly", false);
-                }
-                if (window.editToolSchemaEditor) {
-                    window.editToolSchemaEditor.setOption("readOnly", false);
-                }
+                if (authTypeField) authTypeField.disabled = false;
+                if (urlField) urlField.readOnly = false;
+                if (headersField) headersField.removeAttribute('readonly');
+                if (schemaField) schemaField.removeAttribute('readonly');
+                if (editAuthTokenField) editAuthTokenField.removeAttribute('readonly');
+            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', false);
+            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', false);
+
             }
             // Update request types and URL field
             updateEditToolRequestTypes(tool.requestType || null);
             updateEditToolUrl(tool.url || null);
         }
-
+        
+        
         // Auth containers
         const authBasicSection = safeGetElement("edit-auth-basic-fields");
         const authBearerSection = safeGetElement("edit-auth-bearer-fields");
