@@ -1026,7 +1026,7 @@ class Server(Base):
             float: The failure rate as a value between 0 and 1.
 
         Examples:
-            >>> tool = Tool(original_name="test_tool", original_name_slug="test-tool", input_schema={})
+            >>> tool = Tool(custom_name="test_tool", custom_name_slug="test-tool", input_schema={})
             >>> tool.failure_rate  # No metrics yet
             0.0
             >>> tool.metrics = [
@@ -1360,5 +1360,8 @@ def set_custom_name_and_slug(mapper, connection, target):
     target.custom_name_slug = slugify(target.custom_name)
     # Update name field
     gateway_slug = slugify(target.gateway.name) if target.gateway else ""
-    sep = settings.gateway_tool_name_separator
-    target.name = f"{gateway_slug}{sep}{target.custom_name_slug}"
+    if gateway_slug:
+        sep = settings.gateway_tool_name_separator
+        target.name = f"{gateway_slug}{sep}{target.custom_name_slug}"
+    else:
+        target.name = target.custom_name_slug

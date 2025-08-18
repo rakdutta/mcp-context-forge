@@ -1472,7 +1472,7 @@ async def admin_ui(
         >>> mock_tool = ToolRead(
         ...     id="t1", name="T1", original_name="T1", url="http://t1.com", description="d",
         ...     created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc),
-        ...     enabled=True, reachable=True, gateway_slug="default", original_name_slug="t1",
+        ...     enabled=True, reachable=True, gateway_slug="default", custom_name_slug="t1",
         ...     request_type="GET", integration_type="MCP", headers={}, input_schema={},
         ...     annotations={}, jsonpath_filter=None, auth=None, execution_count=0,
         ...     metrics=ToolMetrics(
@@ -1605,7 +1605,7 @@ async def admin_list_tools(
         ...         avg_response_time=0.3, last_execution_time=datetime.now(timezone.utc)
         ...     ),
         ...     gateway_slug="default",
-        ...     original_name_slug="test-tool",
+        ...     custom_name_slug="test-tool",
         ...     tags=[]
         ... )  #  Added gateway_id=None
         >>>
@@ -1633,7 +1633,7 @@ async def admin_list_tools(
         ...         failure_rate=0.0, min_response_time=0.0, max_response_time=0.0,
         ...         avg_response_time=0.0, last_execution_time=None
         ...     ),
-        ...     gateway_slug="default", original_name_slug="inactive-tool",
+        ...     gateway_slug="default", custom_name_slug="inactive-tool",
         ...     tags=[]
         ... )
         >>> tool_service.list_tools = AsyncMock(return_value=[mock_tool, mock_inactive_tool])
@@ -1719,7 +1719,7 @@ async def admin_get_tool(tool_id: str, db: Session = Depends(get_db), user: str 
         ...         failure_rate=0.0, min_response_time=0.0, max_response_time=0.0, avg_response_time=0.0,
         ...         last_execution_time=None
         ...     ),
-        ...     gateway_slug="default", original_name_slug="get-tool",
+        ...     gateway_slug="default", custom_name_slug="get-tool",
         ...     tags=[]
         ... )
         >>>
@@ -1937,9 +1937,11 @@ async def admin_add_tool(
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
     }
+    logger.info(f"Tool data before validation: {tool_data}")
     logger.debug(f"Tool data built: {tool_data}")
     try:
         tool = ToolCreate(**tool_data)
+        logger.info(f"Tool data after validation: {tool.model_dump(by_alias=True)}")
         logger.debug(f"Validated tool data: {tool.model_dump(by_alias=True)}")
         await tool_service.register_tool(db, tool)
         return JSONResponse(
@@ -2135,13 +2137,13 @@ async def admin_edit_tool(
     """
     logger.debug(f"User {user} is editing tool ID {tool_id}")
     form = await request.form()
-
     # Parse tags from comma-separated string
     tags_str = str(form.get("tags", ""))
     tags: list[str] = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
 
     tool_data: dict[str, Any] = {
         "name": form.get("name"),
+        "custom_name": form.get("customName"),
         "url": form.get("url"),
         "description": form.get("description"),
         "headers": json.loads(form.get("headers") or "{}"),
@@ -2155,6 +2157,7 @@ async def admin_edit_tool(
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
     }
+    logger.info(f"tool_data:{tool_data}")
     # Only include integration_type if it's provided (not disabled in form)
     if "integrationType" in form:
         tool_data["integration_type"] = form.get("integrationType")
@@ -2164,6 +2167,7 @@ async def admin_edit_tool(
     logger.debug(f"Tool update data built: {tool_data}")
     try:
         tool = ToolUpdate(**tool_data)  # Pydantic validation happens here
+        logger.info(f"tool:{tool}")
         await tool_service.update_tool(db, tool_id, tool)
         return JSONResponse(content={"message": "Edit tool successfully", "success": True}, status_code=200)
     except IntegrityError as ex:

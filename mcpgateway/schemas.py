@@ -303,9 +303,9 @@ class ToolCreate(BaseModel):
         auth (Optional[AuthenticationValues]): Authentication credentials (Basic or Bearer Token or custom headers) if required.
         gateway_id (Optional[str]): ID of the gateway for the tool.
     """
-
+    
     model_config = ConfigDict(str_strip_whitespace=True, populate_by_name=True)
-
+ 
     name: str = Field(..., description="Unique name for the tool")
     url: Union[str, AnyHttpUrl] = Field(None, description="Tool endpoint URL")
     description: Optional[str] = Field(None, description="Tool description")
@@ -356,7 +356,7 @@ class ToolCreate(BaseModel):
             ValueError: ...
         """
         return SecurityValidator.validate_tool_name(v)
-
+    
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
@@ -601,6 +601,7 @@ class ToolUpdate(BaseModelWithConfigDict):
     """
 
     name: Optional[str] = Field(None, description="Unique name for the tool")
+    custom_name: Optional[str] = Field(None, description="Custom name for the tool")
     url: Optional[Union[str, AnyHttpUrl]] = Field(None, description="Tool endpoint URL")
     description: Optional[str] = Field(None, description="Tool description")
     integration_type: Optional[Literal["REST", "MCP"]] = Field(None, description="Tool integration type")
@@ -640,7 +641,18 @@ class ToolUpdate(BaseModelWithConfigDict):
             str: Value if validated as safe
         """
         return SecurityValidator.validate_tool_name(v)
+    @field_validator("custom_name")
+    @classmethod
+    def validate_custom_name(cls, v: str) -> str:
+        """Ensure custom tool names follow MCP naming conventions
 
+        Args:
+            v (str): Value to validate
+
+        Returns:
+            str: Value if validated as safe
+        """
+        return SecurityValidator.validate_tool_name(v)
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
@@ -833,7 +845,8 @@ class ToolRead(BaseModelWithConfigDict):
     metrics: ToolMetrics
     name: str
     gateway_slug: str
-    original_name_slug: str
+    custom_name: str
+    custom_name_slug: str
     tags: List[str] = Field(default_factory=list, description="Tags for categorizing the tool")
 
 

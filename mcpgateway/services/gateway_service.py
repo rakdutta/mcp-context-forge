@@ -452,7 +452,8 @@ class GatewayService:
             tools = [
                 DbTool(
                     original_name=tool.name,
-                    original_name_slug=slugify(tool.name),
+                    custom_name=tool.name,
+                    custom_name_slug=slugify(tool.name),
                     url=normalized_url,
                     description=tool.description,
                     integration_type="MCP",  # Gateway-discovered tools are MCP type
@@ -682,8 +683,8 @@ class GatewayService:
                             if not existing_tool:
                                 gateway.tools.append(
                                     DbTool(
-                                        original_name=tool.name,
-                                        original_name_slug=slugify(tool.name),
+                                        custom_name=tool.custom_name,
+                                        custom_name_slug=slugify(tool.custom_name),
                                         url=gateway.url,
                                         description=tool.description,
                                         integration_type="MCP",  # Gateway-discovered tools are MCP type
@@ -869,8 +870,8 @@ class GatewayService:
                             if not existing_tool:
                                 gateway.tools.append(
                                     DbTool(
-                                        original_name=tool.name,
-                                        original_name_slug=slugify(tool.name),
+                                        custom_name=tool.custom_name,
+                                        custom_name_slug=slugify(tool.custom_name),
                                         url=gateway.url,
                                         description=tool.description,
                                         integration_type="MCP",  # Gateway-discovered tools are MCP type
