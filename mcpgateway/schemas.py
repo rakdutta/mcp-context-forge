@@ -303,9 +303,9 @@ class ToolCreate(BaseModel):
         auth (Optional[AuthenticationValues]): Authentication credentials (Basic or Bearer Token or custom headers) if required.
         gateway_id (Optional[str]): ID of the gateway for the tool.
     """
-
+    
     model_config = ConfigDict(str_strip_whitespace=True, populate_by_name=True)
-
+ 
     name: str = Field(..., description="Unique name for the tool")
     url: Union[str, AnyHttpUrl] = Field(None, description="Tool endpoint URL")
     description: Optional[str] = Field(None, description="Tool description")
@@ -356,7 +356,7 @@ class ToolCreate(BaseModel):
             ValueError: ...
         """
         return SecurityValidator.validate_tool_name(v)
-
+    
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
@@ -641,7 +641,6 @@ class ToolUpdate(BaseModelWithConfigDict):
             str: Value if validated as safe
         """
         return SecurityValidator.validate_tool_name(v)
-
     @field_validator("custom_name")
     @classmethod
     def validate_custom_name(cls, v: str) -> str:
@@ -654,7 +653,6 @@ class ToolUpdate(BaseModelWithConfigDict):
             str: Value if validated as safe
         """
         return SecurityValidator.validate_tool_name(v)
-
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:

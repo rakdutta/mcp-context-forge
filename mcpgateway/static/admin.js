@@ -1960,6 +1960,13 @@ async function editTool(toolId) {
         if (typeField) {
             typeField.value = tool.integrationType || "MCP";
         }
+        if (urlField) {
+            if (typeField.value === 'MCP') {
+                urlField.readOnly = true;
+            } else {
+                urlField.readOnly = false;
+            }
+        }
 
         // Set tags field
         const tagsField = safeGetElement("edit-tool-tags");
@@ -2015,6 +2022,19 @@ async function editTool(toolId) {
                 JSON.stringify(schemaValidation.value, null, 2),
             );
             window.editToolSchemaEditor.refresh();
+        }
+
+        // Prefill integration type from DB and set request types accordingly
+        if (typeField) {
+            typeField.value = tool.integrationType || "REST";
+            // Disable integration type field for MCP tools (cannot be changed)
+            if (tool.integrationType === "MCP") {
+                typeField.disabled = true;
+            } else {
+                typeField.disabled = false;
+            }
+            updateEditToolRequestTypes(tool.requestType || null); // preselect from DB
+            updateEditToolUrl(tool.url||null);
         }
 
         // Request Type field handling (disable for MCP)
@@ -3989,6 +4009,28 @@ function updateEditToolRequestTypes(selectedMethod = null) {
 
     // const prevType = editToolTypeSelect.dataset.prevValue;
     const selectedType = editToolTypeSelect.value;
+    // Only block changing REST to MCP
+    if (prevType === 'REST' && selectedType === 'MCP') {
+        alert('You cannot change integration type from REST to MCP.');
+        editToolTypeSelect.value = prevType;
+        // Restore request type dropdown to previous enabled state and value
+        const allowedMethods = integrationRequestMap[prevType] || [];
+        editToolRequestTypeSelect.disabled = false;
+        editToolRequestTypeSelect.innerHTML = "";
+        allowedMethods.forEach((method) => {
+            const option = document.createElement("option");
+            option.value = method;
+            option.textContent = method;
+            editToolRequestTypeSelect.appendChild(option);
+        });
+        if (selectedMethod && allowedMethods.includes(selectedMethod)) {
+            editToolRequestTypeSelect.value = selectedMethod;
+        }
+        return;
+    } else {
+        editToolTypeSelect.dataset.prevValue = selectedType;
+    }
+
     const allowedMethods = integrationRequestMap[selectedType] || [];
 
     // If this integration has no HTTP verbs (MCP), clear & disable the control
