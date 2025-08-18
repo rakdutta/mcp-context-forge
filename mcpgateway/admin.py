@@ -1937,11 +1937,9 @@ async def admin_add_tool(
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
     }
-    logger.info(f"Tool data before validation: {tool_data}")
     logger.debug(f"Tool data built: {tool_data}")
     try:
         tool = ToolCreate(**tool_data)
-        logger.info(f"Tool data after validation: {tool.model_dump(by_alias=True)}")
         logger.debug(f"Validated tool data: {tool.model_dump(by_alias=True)}")
         await tool_service.register_tool(db, tool)
         return JSONResponse(
@@ -2157,7 +2155,6 @@ async def admin_edit_tool(
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
     }
-    logger.info(f"tool_data:{tool_data}")
     # Only include integration_type if it's provided (not disabled in form)
     if "integrationType" in form:
         tool_data["integration_type"] = form.get("integrationType")
@@ -2167,7 +2164,6 @@ async def admin_edit_tool(
     logger.debug(f"Tool update data built: {tool_data}")
     try:
         tool = ToolUpdate(**tool_data)  # Pydantic validation happens here
-        logger.info(f"tool:{tool}")
         await tool_service.update_tool(db, tool_id, tool)
         return JSONResponse(content={"message": "Edit tool successfully", "success": True}, status_code=200)
     except IntegrityError as ex:
