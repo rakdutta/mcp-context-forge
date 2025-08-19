@@ -6499,8 +6499,6 @@ document.addEventListener("DOMContentLoaded", () => {
         //     });
         // });
 
-									
-							  
 
         // Mark as initialized
         AppState.isInitialized = true;

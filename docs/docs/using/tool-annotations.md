@@ -255,3 +255,4 @@ Many MCP clients use annotations to:
 - **Adjust UI presentation** based on safety hints
 
 Properly annotated tools provide better user experiences and safer AI agent interactions.
+

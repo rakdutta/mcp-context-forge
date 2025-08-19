@@ -1264,7 +1264,6 @@ async def create_tool(tool: ToolCreate, request: Request, db: Session = Depends(
         HTTPException: If the tool name already exists or other validation errors occur.
     """
     try:
-
         # Extract metadata from request
         metadata = MetadataCapture.extract_creation_metadata(request, user)
 
