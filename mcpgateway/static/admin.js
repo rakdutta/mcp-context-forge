@@ -2027,7 +2027,7 @@ async function editTool(toolId) {
                 typeField.disabled = false;
             }
             updateEditToolRequestTypes(tool.requestType || null); // preselect from DB
-            updateEditToolUrl(tool.url||null);
+            updateEditToolUrl(tool.url || null);
         }
 
         // Request Type field handling (disable for MCP)
@@ -6498,7 +6498,6 @@ document.addEventListener("DOMContentLoaded", () => {
         //         document.getElementById(tabId).classList.remove('hidden');
         //     });
         // });
-
 
         // Mark as initialized
         AppState.isInitialized = true;
