@@ -2199,7 +2199,6 @@ async def admin_edit_tool(
     """
     LOGGER.debug(f"User {user} is editing tool ID {tool_id}")
     form = await request.form()
-    logger.info(f"Editing tool with data: {form}")
     # Parse tags from comma-separated string
     tags_str = str(form.get("tags", ""))
     tags: list[str] = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
