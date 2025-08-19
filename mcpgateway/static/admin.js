@@ -3710,6 +3710,27 @@ function updateEditToolRequestTypes(selectedMethod = null) {
 // TOOL SELECT FUNCTIONALITY
 // ===================================================================
 
+//Prevent manual REST→MCP changes in edit-tool-form
+document.addEventListener('DOMContentLoaded', function () {
+    const editToolTypeSelect = document.getElementById('edit-tool-type');
+    if (editToolTypeSelect) {
+        // Store the initial value for comparison
+        editToolTypeSelect.dataset.prevValue = editToolTypeSelect.value;
+
+        editToolTypeSelect.addEventListener('change', function (e) {
+            const prevType = this.dataset.prevValue;
+            const selectedType = this.value;
+            if (prevType === 'REST' && selectedType === 'MCP') {
+                alert('You cannot change integration type from REST to MCP.');
+                this.value = prevType;
+                // Optionally, reset any dependent fields here
+            } else {
+                this.dataset.prevValue = selectedType;
+            }
+        });
+    }
+});
+//===================================================================
 function initToolSelect(
     selectId,
     pillsId,
