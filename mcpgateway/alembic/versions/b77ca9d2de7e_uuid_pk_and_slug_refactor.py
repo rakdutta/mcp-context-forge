@@ -109,9 +109,7 @@ def upgrade() -> None:
 
     op.add_column("tools", sa.Column("id_new", sa.String(36), nullable=True))
     op.add_column("tools", sa.Column("original_name", sa.String(), nullable=True))
-    # op.add_column("tools", sa.Column("original_name_slug", sa.String(), nullable=True))
-    op.add_column("tools", sa.Column("custom_name", sa.String(), nullable=True))
-    op.add_column("tools", sa.Column("custom_name_slug", sa.String(), nullable=True))
+    op.add_column("tools", sa.Column("original_name_slug", sa.String(), nullable=True))
     op.add_column("tools", sa.Column("name_new", sa.String(), nullable=True))
     op.add_column("tools", sa.Column("gateway_id_new", sa.String(36), nullable=True))
 
@@ -147,7 +145,7 @@ def upgrade() -> None:
                 UPDATE tools
                 SET id_new=:u,
                     original_name=:on,
-                    custom_name_slug=:ons,
+                    original_name_slug=:ons,
                     name_new = CASE
                         WHEN :g IS NOT NULL THEN (SELECT slug FROM gateways WHERE id = :g) || :sep || :ons
                         ELSE :ons
@@ -236,9 +234,7 @@ def upgrade() -> None:
         batch_op.drop_column("name")
         batch_op.alter_column("name_new", new_column_name="name", nullable=True)
         batch_op.alter_column("original_name", nullable=False)
-        # batch_op.alter_column("original_name_slug", nullable=False)
-        batch_op.alter_column("custom_name", nullable=False)
-        batch_op.alter_column("custom_name_slug", nullable=False)
+        batch_op.alter_column("original_name_slug", nullable=False)
         batch_op.create_unique_constraint("uq_tools_name", ["name"])
         batch_op.create_unique_constraint("uq_gateway_id__original_name", ["gateway_id", "original_name"])
 
@@ -549,7 +545,7 @@ def downgrade() -> None:
     op.drop_column("servers", "id_new")
     op.drop_column("tools", "gateway_id_new")
     op.drop_column("tools", "name_new")
-    # op.drop_column("tools", "original_name_slug")
+    op.drop_column("tools", "original_name_slug")
     op.drop_column("tools", "original_name")
     op.drop_column("tools", "id_new")
     op.drop_column("gateways", "id_new")
