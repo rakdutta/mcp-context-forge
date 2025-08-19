@@ -1,9 +1,9 @@
 // Make URL field read-only for integration type MCP
 function updateEditToolUrl() {
-    const editTypeField = document.getElementById('edit-tool-type');
-    const editurlField = document.getElementById('edit-tool-url');
+    const editTypeField = document.getElementById("edit-tool-type");
+    const editurlField = document.getElementById("edit-tool-url");
     if (editTypeField && editurlField) {
-        if (editTypeField.value === 'MCP') {
+        if (editTypeField.value === "MCP") {
             editurlField.readOnly = true;
         } else {
             editurlField.readOnly = false;
@@ -12,10 +12,10 @@ function updateEditToolUrl() {
 }
 
 // Attach event listener after DOM is loaded or when modal opens
-document.addEventListener('DOMContentLoaded', function() {
-    const TypeField = document.getElementById('edit-tool-type');
+document.addEventListener("DOMContentLoaded", function () {
+    const TypeField = document.getElementById("edit-tool-type");
     if (TypeField) {
-        TypeField.addEventListener('change', updateEditToolUrl);
+        TypeField.addEventListener("change", updateEditToolUrl);
         // Set initial state
         updateEditToolUrl();
     }
@@ -1960,7 +1960,6 @@ async function editTool(toolId) {
         if (typeField) {
             typeField.value = tool.integrationType || "MCP";
         }
-        
 
         // Set tags field
         const tagsField = safeGetElement("edit-tool-tags");
@@ -2003,8 +2002,7 @@ async function editTool(toolId) {
                 2,
             );
         }
-        
-        
+
         // Update CodeMirror editors if they exist
         if (window.editToolHeadersEditor && headersValidation.valid) {
             window.editToolHeadersEditor.setValue(
@@ -2018,7 +2016,6 @@ async function editTool(toolId) {
             );
             window.editToolSchemaEditor.refresh();
         }
-       
 
         // Request Type field handling (disable for MCP)
         const requestTypeField = safeGetElement("edit-tool-request-type");
@@ -2037,54 +2034,85 @@ async function editTool(toolId) {
         if (authTypeField) {
             authTypeField.value = tool.auth?.authType || "";
         }
-        const editAuthTokenField = safeGetElement('edit-auth-token');
-         // Prefill integration type from DB and set request types accordingly
+        const editAuthTokenField = safeGetElement("edit-auth-token");
+        // Prefill integration type from DB and set request types accordingly
         if (typeField) {
             // Always set value from DB, never from previous UI state
             typeField.value = tool.integrationType;
             // Remove any previous hidden field for type
-            const prevHiddenType = document.getElementById('hidden-edit-tool-type');
-            if (prevHiddenType) prevHiddenType.remove();
+            const prevHiddenType = document.getElementById(
+                "hidden-edit-tool-type",
+            );
+            if (prevHiddenType) {
+                prevHiddenType.remove();
+            }
             // Remove any previous hidden field for authType
-            const prevHiddenAuthType = document.getElementById('hidden-edit-auth-type');
-            if (prevHiddenAuthType) prevHiddenAuthType.remove();
+            const prevHiddenAuthType = document.getElementById(
+                "hidden-edit-auth-type",
+            );
+            if (prevHiddenAuthType) {
+                prevHiddenAuthType.remove();
+            }
             // Disable integration type field for MCP tools (cannot be changed)
             if (tool.integrationType === "MCP") {
                 typeField.disabled = true;
                 if (authTypeField) {
                     authTypeField.disabled = true;
                     // Add hidden field for authType
-                    const hiddenAuthTypeField = document.createElement('input');
-                    hiddenAuthTypeField.type = 'hidden';
+                    const hiddenAuthTypeField = document.createElement("input");
+                    hiddenAuthTypeField.type = "hidden";
                     hiddenAuthTypeField.name = authTypeField.name;
                     hiddenAuthTypeField.value = authTypeField.value;
-                    hiddenAuthTypeField.id = 'hidden-edit-auth-type';
+                    hiddenAuthTypeField.id = "hidden-edit-auth-type";
                     authTypeField.form.appendChild(hiddenAuthTypeField);
                 }
-                if (urlField) urlField.readOnly = true;
-                if (headersField) headersField.setAttribute('readonly', 'readonly');
-                if (schemaField) schemaField.setAttribute('readonly', 'readonly');
-                if (editAuthTokenField) editAuthTokenField.setAttribute('readonly', 'readonly');
-                if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', true);
-                if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', true);
-            
+                if (urlField) {
+                    urlField.readOnly = true;
+                }
+                if (headersField) {
+                    headersField.setAttribute("readonly", "readonly");
+                }
+                if (schemaField) {
+                    schemaField.setAttribute("readonly", "readonly");
+                }
+                if (editAuthTokenField) {
+                    editAuthTokenField.setAttribute("readonly", "readonly");
+                }
+                if (window.editToolHeadersEditor) {
+                    window.editToolHeadersEditor.setOption("readOnly", true);
+                }
+                if (window.editToolSchemaEditor) {
+                    window.editToolSchemaEditor.setOption("readOnly", true);
+                }
             } else {
                 typeField.disabled = false;
-                if (authTypeField) authTypeField.disabled = false;
-                if (urlField) urlField.readOnly = false;
-                if (headersField) headersField.removeAttribute('readonly');
-                if (schemaField) schemaField.removeAttribute('readonly');
-                if (editAuthTokenField) editAuthTokenField.removeAttribute('readonly');
-            if (window.editToolHeadersEditor) window.editToolHeadersEditor.setOption('readOnly', false);
-            if (window.editToolSchemaEditor) window.editToolSchemaEditor.setOption('readOnly', false);
-
+                if (authTypeField) {
+                    authTypeField.disabled = false;
+                }
+                if (urlField) {
+                    urlField.readOnly = false;
+                }
+                if (headersField) {
+                    headersField.removeAttribute("readonly");
+                }
+                if (schemaField) {
+                    schemaField.removeAttribute("readonly");
+                }
+                if (editAuthTokenField) {
+                    editAuthTokenField.removeAttribute("readonly");
+                }
+                if (window.editToolHeadersEditor) {
+                    window.editToolHeadersEditor.setOption("readOnly", false);
+                }
+                if (window.editToolSchemaEditor) {
+                    window.editToolSchemaEditor.setOption("readOnly", false);
+                }
             }
             // Update request types and URL field
             updateEditToolRequestTypes(tool.requestType || null);
             updateEditToolUrl(tool.url || null);
         }
-        
-        
+
         // Auth containers
         const authBasicSection = safeGetElement("edit-auth-basic-fields");
         const authBearerSection = safeGetElement("edit-auth-bearer-fields");
@@ -3679,7 +3707,7 @@ function updateEditToolRequestTypes(selectedMethod = null) {
         editToolTypeSelect.dataset.prevValue = editToolTypeSelect.value;
     }
 
-    const prevType = editToolTypeSelect.dataset.prevValue;
+    // const prevType = editToolTypeSelect.dataset.prevValue;
     const selectedType = editToolTypeSelect.value;
     const allowedMethods = integrationRequestMap[selectedType] || [];
 
@@ -3710,18 +3738,18 @@ function updateEditToolRequestTypes(selectedMethod = null) {
 // TOOL SELECT FUNCTIONALITY
 // ===================================================================
 
-//Prevent manual REST→MCP changes in edit-tool-form
-document.addEventListener('DOMContentLoaded', function () {
-    const editToolTypeSelect = document.getElementById('edit-tool-type');
+// Prevent manual REST→MCP changes in edit-tool-form
+document.addEventListener("DOMContentLoaded", function () {
+    const editToolTypeSelect = document.getElementById("edit-tool-type");
     if (editToolTypeSelect) {
         // Store the initial value for comparison
         editToolTypeSelect.dataset.prevValue = editToolTypeSelect.value;
 
-        editToolTypeSelect.addEventListener('change', function (e) {
+        editToolTypeSelect.addEventListener("change", function (e) {
             const prevType = this.dataset.prevValue;
             const selectedType = this.value;
-            if (prevType === 'REST' && selectedType === 'MCP') {
-                alert('You cannot change integration type from REST to MCP.');
+            if (prevType === "REST" && selectedType === "MCP") {
+                alert("You cannot change integration type from REST to MCP.");
                 this.value = prevType;
                 // Optionally, reset any dependent fields here
             } else {
@@ -3730,7 +3758,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
-//===================================================================
+//= ==================================================================
 function initToolSelect(
     selectId,
     pillsId,
@@ -3954,7 +3982,7 @@ async function testTool(toolId) {
         }
 
         const tool = await response.json();
-        console.log(`Tool ${toolId} fetched successfully`, tool);   
+        console.log(`Tool ${toolId} fetched successfully`, tool);
         toolInputSchemaRegistry = tool;
 
         // 7. CLEAN STATE before proceeding
@@ -6397,9 +6425,10 @@ function setupIntegrationTypeHandlers() {
 
     const editToolTypeSelect = safeGetElement("edit-tool-type");
     if (editToolTypeSelect) {
-        editToolTypeSelect.addEventListener("change", () =>
-            updateEditToolRequestTypes(),
-            //updateEditToolUrl(),
+        editToolTypeSelect.addEventListener(
+            "change",
+            () => updateEditToolRequestTypes(),
+            // updateEditToolUrl(),
         );
     }
 }
