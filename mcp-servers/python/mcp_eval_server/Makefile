@@ -16,7 +16,7 @@ help: ## Show this help message
 	@echo "🚀 Quick Start:"
 	@echo "  make dev                 Start MCP server (stdio) with connection info"
 	@echo "  make serve-http          Start HTTP server (JSON-RPC over HTTP)"
-	@echo "  make example             Run evaluation example" 
+	@echo "  make example             Run evaluation example"
 	@echo "  make mcp-info            Show MCP connection guide"
 	@echo "  make http-info           Show HTTP server connection guide"
 	@echo ""
@@ -152,10 +152,10 @@ release: test lint build ## Run tests, lint, and build for release
 check-env: ## Check required environment variables
 	@echo "🔍 Checking environment configuration..."
 	@echo ""
-	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$AZURE_OPENAI_KEY" ]; then \
+	@if [ -z "$$OPENAI_API_KEY" ] && [ -z "$$AZURE_OPENAI_API_KEY" ]; then \
 		echo "⚠️  WARNING: No API keys found for LLM judges"; \
 		echo "📝 To use OpenAI judges: export OPENAI_API_KEY='sk-...'"; \
-		echo "📝 To use Azure judges: export AZURE_OPENAI_KEY='...'"; \
+		echo "📝 To use Azure judges: export AZURE_OPENAI_API_KEY='...'"; \
 		echo ""; \
 		echo "✅ Rule-based judge available (no API key needed)"; \
 	else \
@@ -164,7 +164,7 @@ check-env: ## Check required environment variables
 	@echo ""
 	@echo "📊 Available evaluation capabilities:"
 	@echo "   • 4 Judge tools (evaluate, compare, rank, reference)"
-	@echo "   • 4 Prompt tools (clarity, consistency, completeness, relevance)" 
+	@echo "   • 4 Prompt tools (clarity, consistency, completeness, relevance)"
 	@echo "   • 4 Agent tools (tool usage, task completion, reasoning, benchmarks)"
 	@echo "   • 3 Quality tools (factuality, coherence, toxicity)"
 	@echo "   • 3 Workflow tools (suites, execution, comparison)"
@@ -172,6 +172,46 @@ check-env: ## Check required environment variables
 	@echo "   • 9 Server tools (management, statistics, health)"
 	@echo ""
 	@echo "✅ Environment check complete"
+
+validate-models: ## Run comprehensive model validation and connectivity tests
+	@echo "🔍 Running model validation and connectivity tests..."
+	$(PYTHON) validate_models.py
+
+test-all-providers: ## Test all LLM providers (OpenAI, Azure, Anthropic, Bedrock, Gemini, Watsonx, OLLAMA)
+	@echo "🧪 Testing all LLM provider implementations..."
+	$(PYTHON) test_all_providers.py
+
+validate-config: ## Validate custom configuration files
+	@echo "🔍 Validating configuration files..."
+	@if [ -n "$$MCP_EVAL_MODELS_CONFIG" ]; then \
+		echo "📄 Validating custom models config: $$MCP_EVAL_MODELS_CONFIG"; \
+		$(PYTHON) -c "import yaml; yaml.safe_load(open('$$MCP_EVAL_MODELS_CONFIG')); print('✅ Configuration syntax valid')"; \
+	else \
+		echo "📄 Validating default models config"; \
+		$(PYTHON) -c "import yaml; yaml.safe_load(open('mcp_eval_server/config/models.yaml')); print('✅ Configuration syntax valid')"; \
+	fi
+
+copy-config: ## Copy default configuration for customization
+	@echo "📋 Copying default configuration files for customization..."
+	@mkdir -p ./custom-config
+	@cp mcp_eval_server/config/models.yaml ./custom-config/models.yaml
+	@cp mcp_eval_server/config/rubrics.yaml ./custom-config/rubrics.yaml
+	@cp mcp_eval_server/config/benchmarks.yaml ./custom-config/benchmarks.yaml
+	@cp mcp_eval_server/config/judge_prompts.yaml ./custom-config/judge_prompts.yaml
+	@echo "✅ Configuration files copied to ./custom-config/"
+	@echo "💡 To use custom config: export MCP_EVAL_MODELS_CONFIG='./custom-config/models.yaml'"
+
+show-config: ## Show current configuration status
+	@echo "🔧 Current Configuration Status:"
+	@echo "   Models config: $${MCP_EVAL_MODELS_CONFIG:-default (mcp_eval_server/config/models.yaml)}"
+	@echo "   Default judge: $${DEFAULT_JUDGE_MODEL:-gpt-4o-mini}"
+	@echo "   Config dir: $${MCP_EVAL_CONFIG_DIR:-default (mcp_eval_server/config/)}"
+	@echo ""
+	@echo "🔑 Environment Variables:"
+	@echo "   OPENAI_API_KEY: $${OPENAI_API_KEY:+✅ configured}$${OPENAI_API_KEY:-❌ not set}"
+	@echo "   AZURE_OPENAI_API_KEY: $${AZURE_OPENAI_API_KEY:+✅ configured}$${AZURE_OPENAI_API_KEY:-❌ not set}"
+	@echo "   ANTHROPIC_API_KEY: $${ANTHROPIC_API_KEY:+✅ configured}$${ANTHROPIC_API_KEY:-❌ not set}"
+	@echo "   OLLAMA_BASE_URL: $${OLLAMA_BASE_URL:-❌ not set}"
 
 mcp-info: ## Show MCP connection information
 	@echo "📡 MCP Evaluation Server Connection Guide"
@@ -195,7 +235,7 @@ mcp-info: ## Show MCP connection information
 	@echo ""
 	@echo "🛠️  Available Tools: 29 evaluation tools"
 	@echo "   • judge.evaluate_response"
-	@echo "   • judge.pairwise_comparison" 
+	@echo "   • judge.pairwise_comparison"
 	@echo "   • prompt.evaluate_clarity"
 	@echo "   • agent.evaluate_tool_use"
 	@echo "   • quality.assess_toxicity"
@@ -206,7 +246,7 @@ mcp-info: ## Show MCP connection information
 	@echo ""
 	@echo "🔑 Optional API Keys:"
 	@echo "   export OPENAI_API_KEY='sk-...'     # For GPT-4, GPT-3.5 judges"
-	@echo "   export AZURE_OPENAI_KEY='...'      # For Azure OpenAI judges"
+	@echo "   export AZURE_OPENAI_API_KEY='...'  # For Azure OpenAI judges"
 	@echo ""
 	@echo "⚡ Quick Test:"
 	@echo "   make example                       # Run evaluation example"
