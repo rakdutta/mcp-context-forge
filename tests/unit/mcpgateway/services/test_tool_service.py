@@ -431,7 +431,7 @@ class TestToolService:
                 "avg_response_time": None,
                 "last_execution_time": None,
             },
-            
+
         )
         tool_service._convert_tool_to_read = Mock(return_value=tool_read)
 
@@ -683,7 +683,7 @@ class TestToolService:
                 "avg_response_time": None,
                 "last_execution_time": None,
             },
-            
+
         )
         tool_service._convert_tool_to_read = Mock(return_value=tool_read)
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """remove original_name_slug and added custom_name
 
 Revision ID: c9dd86c0aac9
