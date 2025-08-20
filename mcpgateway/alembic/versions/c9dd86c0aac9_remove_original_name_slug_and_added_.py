@@ -23,10 +23,11 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Remove original_name_slug column
-    op.drop_column("tools", "original_name_slug")
+    op.alter_column("tools", "original_name_slug", new_column_name="custom_name_slug")
 
     # Add custom_name column
     op.add_column("tools", sa.Column("custom_name", sa.String(), nullable=True))
+    op.execute("UPDATE tools SET custom_name = original_name")
     # ### end Alembic commands ###
 
 
@@ -36,5 +37,5 @@ def downgrade() -> None:
     op.drop_column("tools", "custom_name")
 
     # Add original_name_slug column back
-    op.add_column("tools", sa.Column("original_name_slug", sa.String(), nullable=True))
+    op.alter_column("tools", "custom_name_slug", new_column_name="original_name_slug")
     # ### end Alembic commands ###
