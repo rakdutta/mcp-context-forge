@@ -1360,7 +1360,6 @@ async def update_tool(
         HTTPException: If an error occurs during the update.
     """
     try:
-
         # Get current tool to extract current version
         current_tool = db.get(DbTool, tool_id)
         current_version = getattr(current_tool, "version", 0) if current_tool else 0
