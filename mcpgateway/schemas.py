@@ -27,6 +27,7 @@ import json
 import logging
 import re
 from typing import Any, Dict, List, Literal, Optional, Self, Union
+from urllib.parse import urlparse
 
 # Third-Party
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator, ValidationInfo
@@ -346,6 +347,17 @@ class ToolCreate(BaseModel):
     auth: Optional[AuthenticationValues] = Field(None, description="Authentication credentials (Basic or Bearer Token or custom headers) if required")
     gateway_id: Optional[str] = Field(None, description="id of gateway for the tool")
     tags: Optional[List[str]] = Field(default_factory=list, description="Tags for categorizing the tool")
+   
+    # Passthrough REST fields
+    base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
+    path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
+    query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
+    header_mapping: Optional[Dict[str, Any]] = Field(None, description="Header mapping for REST passthrough")
+    timeout_ms: Optional[int] = Field(20000, description="Timeout in milliseconds for REST passthrough")
+    expose_passthrough: Optional[bool] = Field(True, description="Expose passthrough endpoint for this tool")
+    allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
+    plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
+    plugin_chain_post: Optional[List[str]] = Field(None, description="Post-plugin chain for passthrough")
 
     @field_validator("tags")
     @classmethod
@@ -620,6 +632,77 @@ class ToolCreate(BaseModel):
             raise ValueError("Cannot manually create A2A tools. Add A2A agents via the A2A interface - tools will be auto-created when agents are associated with servers.")
         return values
 
+    @model_validator(mode="before")
+    @classmethod
+    def extract_base_url_and_path_template(cls, values: dict) -> dict:
+        """
+        If 'integration_type' is 'REST' and 'url' is provided, extract 'base_url' and 'path_template'.
+        Ensures path_template starts with a single '/'.
+        """
+        integration_type = values.get("integration_type")
+        url = values.get("url")
+        if integration_type == "REST" and url:
+            parsed = urlparse(str(url))
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            path_template = parsed.path
+            # Ensure path_template starts with a single '/'
+            if path_template and not path_template.startswith("/"):
+                path_template = "/" + path_template.lstrip("/")
+            elif path_template:
+                path_template = "/" + path_template.lstrip("/")
+            if not values.get("base_url"):
+                values["base_url"] = base_url
+            if not values.get("path_template"):
+                values["path_template"] = path_template
+        return values
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, v):
+        if v is None:
+            return v
+        parsed = urlparse(str(v))
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("base_url must be a valid URL with scheme and netloc")
+        return v
+
+    @field_validator("path_template")
+    @classmethod
+    def validate_path_template(cls, v):
+        if v and not str(v).startswith("/"):
+            raise ValueError("path_template must start with '/'")
+        return v
+    @field_validator("timeout_ms")
+
+    @classmethod
+    def validate_timeout_ms(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("timeout_ms must be a positive integer")
+        return v
+
+    @field_validator("allowlist")
+    @classmethod
+    def validate_allowlist(cls, v):
+        if v is None:
+            return v
+        hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
+        for host in v:
+            if not hostname_regex.match(host):
+                raise ValueError(f"Invalid host/scheme in allowlist: {host}")
+        return v    
+        
+    @field_validator("plugin_chain_pre", "plugin_chain_post")
+    @classmethod
+    def validate_plugin_chain(cls, v):
+        allowed_plugins = {"deny_filter", "rate_limit", "pii_filter", "response_shape", "regex_filter", "resource_filter"}
+        if v is None:
+            return v
+        for plugin in v:
+            if plugin not in allowed_plugins:
+                raise ValueError(f"Unknown plugin: {plugin}")
+        return v
+
+
 
 class ToolUpdate(BaseModelWithConfigDict):
     """Schema for updating an existing tool.
@@ -640,6 +723,18 @@ class ToolUpdate(BaseModelWithConfigDict):
     auth: Optional[AuthenticationValues] = Field(None, description="Authentication credentials (Basic or Bearer Token or custom headers) if required")
     gateway_id: Optional[str] = Field(None, description="id of gateway for the tool")
     tags: Optional[List[str]] = Field(None, description="Tags for categorizing the tool")
+
+     # Passthrough REST fields
+    base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
+    path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
+    query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
+    header_mapping: Optional[Dict[str, Any]] = Field(None, description="Header mapping for REST passthrough")
+    timeout_ms: Optional[int] = Field(20000, description="Timeout in milliseconds for REST passthrough")
+    expose_passthrough: Optional[bool] = Field(True, description="Expose passthrough endpoint for this tool")
+    allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
+    plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
+    plugin_chain_post: Optional[List[str]] = Field(None, description="Post-plugin chain for passthrough")
+
 
     @field_validator("tags")
     @classmethod
@@ -896,6 +991,17 @@ class ToolRead(BaseModelWithConfigDict):
     import_batch_id: Optional[str] = Field(None, description="UUID of bulk import batch")
     federation_source: Optional[str] = Field(None, description="Source gateway for federated entities")
     version: Optional[int] = Field(1, description="Entity version for change tracking")
+
+     # Passthrough REST fields
+    base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
+    path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
+    query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
+    header_mapping: Optional[Dict[str, Any]] = Field(None, description="Header mapping for REST passthrough")
+    timeout_ms: Optional[int] = Field(20000, description="Timeout in milliseconds for REST passthrough")
+    expose_passthrough: Optional[bool] = Field(True, description="Expose passthrough endpoint for this tool")
+    allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
+    plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
+    plugin_chain_post: Optional[List[str]] = Field(None, description="Post-plugin chain for passthrough")
 
 
 class ToolInvocation(BaseModelWithConfigDict):

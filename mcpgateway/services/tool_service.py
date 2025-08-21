@@ -401,6 +401,9 @@ class ToolService:
                 import_batch_id=import_batch_id,
                 federation_source=federation_source,
                 version=1,
+                # passthrough REST tools fields
+                base_url=tool.base_url,
+                path_template=tool.path_template
             )
             db.add(db_tool)
             db.commit()
