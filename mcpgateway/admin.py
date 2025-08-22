@@ -1994,6 +1994,13 @@ async def admin_add_tool(
         "auth_header_key": form.get("auth_header_key", ""),
         "auth_header_value": form.get("auth_header_value", ""),
         "tags": tags,
+        "query_mapping": json.loads(form.get("query_mapping") or "{}"),
+        "header_mapping": json.loads(form.get("header_mapping") or "{}"),
+        "timeout_ms": form.get("timeout_ms"),
+        "expose_passthrough": form.get("expose_passthrough", "true"),
+        "allowlist": json.loads(form.get("allowlist") or "[]"),
+        "plugin_chain_pre": json.loads(form.get("plugin_chain_pre") or "[]"),
+        "plugin_chain_post": json.loads(form.get("plugin_chain_post") or "[]"),
     }
     LOGGER.debug(f"Tool data built: {tool_data}")
     try:
