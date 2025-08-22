@@ -312,6 +312,7 @@ class AuthenticationValues(BaseModelWithConfigDict):
 
 
 class ToolCreate(BaseModel):
+   
     """
     Represents the configuration for creating a tool with various attributes and settings.
 
@@ -329,6 +330,8 @@ class ToolCreate(BaseModel):
         auth (Optional[AuthenticationValues]): Authentication credentials (Basic or Bearer Token or custom headers) if required.
         gateway_id (Optional[str]): ID of the gateway for the tool.
     """
+
+
 
     model_config = ConfigDict(str_strip_whitespace=True, populate_by_name=True)
 
@@ -634,21 +637,41 @@ class ToolCreate(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
+    def enforce_passthrough_fields_for_rest(cls, values: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Enforce that passthrough REST fields are only set for integration_type 'REST'.
+        If any passthrough field is set for non-REST, raise ValueError.
+        """
+        passthrough_fields = [
+            "base_url", "path_template", "query_mapping", "header_mapping", "timeout_ms",
+            "expose_passthrough", "allowlist", "plugin_chain_pre", "plugin_chain_post"
+        ]
+        integration_type = values.get("integration_type")
+        if integration_type != "REST":
+            for field in passthrough_fields:
+                if field in values and values[field] not in (None, [], {}):
+                    raise ValueError(f"Field '{field}' is only allowed for integration_type 'REST'.")
+        return values    
+
+    @model_validator(mode="before")
+    @classmethod
     def extract_base_url_and_path_template(cls, values: dict) -> dict:
         """
-        If 'integration_type' is 'REST' and 'url' is provided, extract 'base_url' and 'path_template'.
+        Only for integration_type 'REST':
+        If 'url' is provided, extract 'base_url' and 'path_template'.
         Ensures path_template starts with a single '/'.
         """
         integration_type = values.get("integration_type")
+        if integration_type != "REST":
+            # Only process for REST, skip for others
+            return values
         url = values.get("url")
-        if integration_type == "REST" and url:
+        if url:
             parsed = urlparse(str(url))
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             path_template = parsed.path
             # Ensure path_template starts with a single '/'
-            if path_template and not path_template.startswith("/"):
-                path_template = "/" + path_template.lstrip("/")
-            elif path_template:
+            if path_template:
                 path_template = "/" + path_template.lstrip("/")
             if not values.get("base_url"):
                 values["base_url"] = base_url
@@ -937,6 +960,76 @@ class ToolUpdate(BaseModelWithConfigDict):
         if integration_type == "A2A":
             raise ValueError("Cannot update tools to A2A integration type. A2A tools are managed by the A2A service.")
         return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_base_url_and_path_template(cls, values: dict) -> dict:
+        """
+        If 'integration_type' is 'REST' and 'url' is provided, extract 'base_url' and 'path_template'.
+        Ensures path_template starts with a single '/'.
+        """
+        integration_type = values.get("integration_type")
+        url = values.get("url")
+        if integration_type == "REST" and url:
+            parsed = urlparse(str(url))
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            path_template = parsed.path
+            # Ensure path_template starts with a single '/'
+            if path_template and not path_template.startswith("/"):
+                path_template = "/" + path_template.lstrip("/")
+            elif path_template:
+                path_template = "/" + path_template.lstrip("/")
+            if not values.get("base_url"):
+                values["base_url"] = base_url
+            if not values.get("path_template"):
+                values["path_template"] = path_template
+        return values
+
+    @field_validator("base_url")
+    @classmethod
+    def validate_base_url(cls, v):
+        if v is None:
+            return v
+        parsed = urlparse(str(v))
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError("base_url must be a valid URL with scheme and netloc")
+        return v
+
+    @field_validator("path_template")
+    @classmethod
+    def validate_path_template(cls, v):
+        if v and not str(v).startswith("/"):
+            raise ValueError("path_template must start with '/'")
+        return v
+    @field_validator("timeout_ms")
+
+    @classmethod
+    def validate_timeout_ms(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("timeout_ms must be a positive integer")
+        return v
+
+    @field_validator("allowlist")
+    @classmethod
+    def validate_allowlist(cls, v):
+        if v is None:
+            return v
+        hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
+        for host in v:
+            if not hostname_regex.match(host):
+                raise ValueError(f"Invalid host/scheme in allowlist: {host}")
+        return v    
+        
+    @field_validator("plugin_chain_pre", "plugin_chain_post")
+    @classmethod
+    def validate_plugin_chain(cls, v):
+        allowed_plugins = {"deny_filter", "rate_limit", "pii_filter", "response_shape", "regex_filter", "resource_filter"}
+        if v is None:
+            return v
+        for plugin in v:
+            if plugin not in allowed_plugins:
+                raise ValueError(f"Unknown plugin: {plugin}")
+        return v
 
 
 class ToolRead(BaseModelWithConfigDict):
