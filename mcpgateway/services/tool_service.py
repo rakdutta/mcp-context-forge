@@ -406,11 +406,11 @@ class ToolService:
                 path_template=tool.path_template if tool.integration_type == "REST" else None,
                 query_mapping=tool.query_mapping if tool.integration_type == "REST" else None,
                 header_mapping=tool.header_mapping if tool.integration_type == "REST" else None,
+                timeout_ms=tool.timeout_ms if tool.integration_type == "REST" else None,
                 expose_passthrough=(tool.expose_passthrough if tool.integration_type == "REST" and tool.expose_passthrough is not None else True) if tool.integration_type == "REST" else None,
                 allowlist=tool.allowlist if tool.integration_type == "REST" else None,
                 plugin_chain_pre=tool.plugin_chain_pre if tool.integration_type == "REST" else None,
                 plugin_chain_post=tool.plugin_chain_post if tool.integration_type == "REST" else None,
-
             )
             db.add(db_tool)
             db.commit()

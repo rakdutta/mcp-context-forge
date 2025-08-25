@@ -1976,7 +1976,6 @@ async def admin_add_tool(
     # Parse tags from comma-separated string
     tags_str = str(form.get("tags", ""))
     tags: list[str] = [tag.strip() for tag in tags_str.split(",") if tag.strip()] if tags_str else []
-
     tool_data: dict[str, Any] = {
         "name": form.get("name"),
         "url": form.get("url"),

@@ -312,7 +312,6 @@ class AuthenticationValues(BaseModelWithConfigDict):
 
 
 class ToolCreate(BaseModel):
-   
     """
     Represents the configuration for creating a tool with various attributes and settings.
 
@@ -331,8 +330,6 @@ class ToolCreate(BaseModel):
         gateway_id (Optional[str]): ID of the gateway for the tool.
     """
 
-
-
     model_config = ConfigDict(str_strip_whitespace=True, populate_by_name=True)
 
     name: str = Field(..., description="Unique name for the tool")
@@ -350,7 +347,7 @@ class ToolCreate(BaseModel):
     auth: Optional[AuthenticationValues] = Field(None, description="Authentication credentials (Basic or Bearer Token or custom headers) if required")
     gateway_id: Optional[str] = Field(None, description="id of gateway for the tool")
     tags: Optional[List[str]] = Field(default_factory=list, description="Tags for categorizing the tool")
-   
+
     # Passthrough REST fields
     base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
     path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
@@ -641,17 +638,23 @@ class ToolCreate(BaseModel):
         """
         Enforce that passthrough REST fields are only set for integration_type 'REST'.
         If any passthrough field is set for non-REST, raise ValueError.
+
+        Args:
+            values (Dict[str, Any]): The input values to validate.
+
+        Returns:
+            Dict[str, Any]: The validated values.
+
+        Raises:
+            ValueError: If passthrough fields are set for non-REST integration_type.
         """
-        passthrough_fields = [
-            "base_url", "path_template", "query_mapping", "header_mapping", "timeout_ms",
-            "expose_passthrough", "allowlist", "plugin_chain_pre", "plugin_chain_post"
-        ]
+        passthrough_fields = ["base_url", "path_template", "query_mapping", "header_mapping", "timeout_ms", "expose_passthrough", "allowlist", "plugin_chain_pre", "plugin_chain_post"]
         integration_type = values.get("integration_type")
         if integration_type != "REST":
             for field in passthrough_fields:
                 if field in values and values[field] not in (None, [], {}):
                     raise ValueError(f"Field '{field}' is only allowed for integration_type 'REST'.")
-        return values    
+        return values
 
     @model_validator(mode="before")
     @classmethod
@@ -660,6 +663,12 @@ class ToolCreate(BaseModel):
         Only for integration_type 'REST':
         If 'url' is provided, extract 'base_url' and 'path_template'.
         Ensures path_template starts with a single '/'.
+
+        Args:
+            values (dict): The input values to process.
+
+        Returns:
+            dict: The updated values with base_url and path_template if applicable.
         """
         integration_type = values.get("integration_type")
         if integration_type != "REST":
@@ -682,6 +691,18 @@ class ToolCreate(BaseModel):
     @field_validator("base_url")
     @classmethod
     def validate_base_url(cls, v):
+        """
+        Validate that base_url is a valid URL with scheme and netloc.
+
+        Args:
+            v (str): The base_url value to validate.
+
+        Returns:
+            str: The validated base_url value.
+
+        Raises:
+            ValueError: If base_url is not a valid URL.
+        """
         if v is None:
             return v
         parsed = urlparse(str(v))
@@ -692,13 +713,37 @@ class ToolCreate(BaseModel):
     @field_validator("path_template")
     @classmethod
     def validate_path_template(cls, v):
+        """
+        Validate that path_template starts with '/'.
+
+        Args:
+            v (str): The path_template value to validate.
+
+        Returns:
+            str: The validated path_template value.
+
+        Raises:
+            ValueError: If path_template does not start with '/'.
+        """
         if v and not str(v).startswith("/"):
             raise ValueError("path_template must start with '/'")
         return v
-    @field_validator("timeout_ms")
 
+    @field_validator("timeout_ms")
     @classmethod
     def validate_timeout_ms(cls, v):
+        """
+        Validate that timeout_ms is a positive integer.
+
+        Args:
+            v (int): The timeout_ms value to validate.
+
+        Returns:
+            int: The validated timeout_ms value.
+
+        Raises:
+            ValueError: If timeout_ms is not a positive integer.
+        """
         if v is not None and v <= 0:
             raise ValueError("timeout_ms must be a positive integer")
         return v
@@ -706,17 +751,41 @@ class ToolCreate(BaseModel):
     @field_validator("allowlist")
     @classmethod
     def validate_allowlist(cls, v):
+        """
+        Validate that each entry in allowlist is a valid host or scheme.
+
+        Args:
+            v (List[str]): The allowlist to validate.
+
+        Returns:
+            List[str]: The validated allowlist.
+
+        Raises:
+            ValueError: If any entry is not a valid host or scheme.
+        """
         if v is None:
             return v
         hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
         for host in v:
             if not hostname_regex.match(host):
                 raise ValueError(f"Invalid host/scheme in allowlist: {host}")
-        return v    
-        
+        return v
+
     @field_validator("plugin_chain_pre", "plugin_chain_post")
     @classmethod
     def validate_plugin_chain(cls, v):
+        """
+        Validate that each plugin in the chain is allowed.
+
+        Args:
+            v (List[str]): The plugin chain to validate.
+
+        Returns:
+            List[str]: The validated plugin chain.
+
+        Raises:
+            ValueError: If any plugin is not in the allowed set.
+        """
         allowed_plugins = {"deny_filter", "rate_limit", "pii_filter", "response_shape", "regex_filter", "resource_filter"}
         if v is None:
             return v
@@ -724,7 +793,6 @@ class ToolCreate(BaseModel):
             if plugin not in allowed_plugins:
                 raise ValueError(f"Unknown plugin: {plugin}")
         return v
-
 
 
 class ToolUpdate(BaseModelWithConfigDict):
@@ -747,7 +815,7 @@ class ToolUpdate(BaseModelWithConfigDict):
     gateway_id: Optional[str] = Field(None, description="id of gateway for the tool")
     tags: Optional[List[str]] = Field(None, description="Tags for categorizing the tool")
 
-     # Passthrough REST fields
+    # Passthrough REST fields
     base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
     path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
     query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
@@ -757,7 +825,6 @@ class ToolUpdate(BaseModelWithConfigDict):
     allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
     plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
     plugin_chain_post: Optional[List[str]] = Field(None, description="Post-plugin chain for passthrough")
-
 
     @field_validator("tags")
     @classmethod
@@ -967,6 +1034,12 @@ class ToolUpdate(BaseModelWithConfigDict):
         """
         If 'integration_type' is 'REST' and 'url' is provided, extract 'base_url' and 'path_template'.
         Ensures path_template starts with a single '/'.
+
+        Args:
+            values (dict): The input values to process.
+
+        Returns:
+            dict: The updated values with base_url and path_template if applicable.
         """
         integration_type = values.get("integration_type")
         url = values.get("url")
@@ -988,6 +1061,18 @@ class ToolUpdate(BaseModelWithConfigDict):
     @field_validator("base_url")
     @classmethod
     def validate_base_url(cls, v):
+        """
+        Validate that base_url is a valid URL with scheme and netloc.
+
+        Args:
+            v (str): The base_url value to validate.
+
+        Returns:
+            str: The validated base_url value.
+
+        Raises:
+            ValueError: If base_url is not a valid URL.
+        """
         if v is None:
             return v
         parsed = urlparse(str(v))
@@ -998,13 +1083,37 @@ class ToolUpdate(BaseModelWithConfigDict):
     @field_validator("path_template")
     @classmethod
     def validate_path_template(cls, v):
+        """
+        Validate that path_template starts with '/'.
+
+        Args:
+            v (str): The path_template value to validate.
+
+        Returns:
+            str: The validated path_template value.
+
+        Raises:
+            ValueError: If path_template does not start with '/'.
+        """
         if v and not str(v).startswith("/"):
             raise ValueError("path_template must start with '/'")
         return v
-    @field_validator("timeout_ms")
 
+    @field_validator("timeout_ms")
     @classmethod
     def validate_timeout_ms(cls, v):
+        """
+        Validate that timeout_ms is a positive integer.
+
+        Args:
+            v (int): The timeout_ms value to validate.
+
+        Returns:
+            int: The validated timeout_ms value.
+
+        Raises:
+            ValueError: If timeout_ms is not a positive integer.
+        """
         if v is not None and v <= 0:
             raise ValueError("timeout_ms must be a positive integer")
         return v
@@ -1012,17 +1121,41 @@ class ToolUpdate(BaseModelWithConfigDict):
     @field_validator("allowlist")
     @classmethod
     def validate_allowlist(cls, v):
+        """
+        Validate that each entry in allowlist is a valid host or scheme.
+
+        Args:
+            v (List[str]): The allowlist to validate.
+
+        Returns:
+            List[str]: The validated allowlist.
+
+        Raises:
+            ValueError: If any entry is not a valid host or scheme.
+        """
         if v is None:
             return v
         hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
         for host in v:
             if not hostname_regex.match(host):
                 raise ValueError(f"Invalid host/scheme in allowlist: {host}")
-        return v    
-        
+        return v
+
     @field_validator("plugin_chain_pre", "plugin_chain_post")
     @classmethod
     def validate_plugin_chain(cls, v):
+        """
+        Validate that each plugin in the chain is allowed.
+
+        Args:
+            v (List[str]): The plugin chain to validate.
+
+        Returns:
+            List[str]: The validated plugin chain.
+
+        Raises:
+            ValueError: If any plugin is not in the allowed set.
+        """
         allowed_plugins = {"deny_filter", "rate_limit", "pii_filter", "response_shape", "regex_filter", "resource_filter"}
         if v is None:
             return v
@@ -1085,7 +1218,7 @@ class ToolRead(BaseModelWithConfigDict):
     federation_source: Optional[str] = Field(None, description="Source gateway for federated entities")
     version: Optional[int] = Field(1, description="Entity version for change tracking")
 
-     # Passthrough REST fields
+    # Passthrough REST fields
     base_url: Optional[str] = Field(None, description="Base URL for REST passthrough")
     path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
     query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
