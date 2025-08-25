@@ -54,7 +54,7 @@ function handleAddPassthrough() {
             allowlistDiv.className = "mb-4";
             allowlistDiv.innerHTML = `
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Allowlist (comma-separated hosts/schemes)</label>
-                <input type="text" id="allowlist-field" name="allowlist" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-900 dark:text-gray-300" placeholder="example.com, https://api.example.com" />
+                <input type="text" id="allowlist-field" name="allowlist" class="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-900 dark:text-gray-300" placeholder="[example.com, https://api.example.com]" />
             `;
             passthroughContainer.appendChild(allowlistDiv);
         }

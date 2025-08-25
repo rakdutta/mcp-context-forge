@@ -754,25 +754,29 @@ class ToolCreate(BaseModel):
     @field_validator("allowlist")
     @classmethod
     def validate_allowlist(cls, v):
-        """
-        Validate that each entry in allowlist is a valid host or scheme.
+            """
+            Validate that allowlist is a list and each entry is a valid host or scheme string.
 
-        Args:
-            v (List[str]): The allowlist to validate.
+            Args:
+                v (List[str]): The allowlist to validate.
 
-        Returns:
-            List[str]: The validated allowlist.
+            Returns:
+                List[str]: The validated allowlist.
 
-        Raises:
-            ValueError: If any entry is not a valid host or scheme.
-        """
-        if v is None:
+            Raises:
+                ValueError: If allowlist is not a list or any entry is not a valid host/scheme string.
+            """
+            if v is None:
+                return None
+            if not isinstance(v, list):
+                raise ValueError("allowlist must be a list of host/scheme strings")
+            hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
+            for host in v:
+                if not isinstance(host, str):
+                    raise ValueError(f"Invalid type in allowlist: {host} (must be str)")
+                if not hostname_regex.match(host):
+                    raise ValueError(f"Invalid host/scheme in allowlist: {host}")
             return v
-        hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
-        for host in v:
-            if not hostname_regex.match(host):
-                raise ValueError(f"Invalid host/scheme in allowlist: {host}")
-        return v
 
     @field_validator("plugin_chain_pre", "plugin_chain_post")
     @classmethod
@@ -1127,26 +1131,29 @@ class ToolUpdate(BaseModelWithConfigDict):
     @field_validator("allowlist")
     @classmethod
     def validate_allowlist(cls, v):
-        """
-        Validate that each entry in allowlist is a valid host or scheme.
+            """
+            Validate that allowlist is a list and each entry is a valid host or scheme string.
 
-        Args:
-            v (List[str]): The allowlist to validate.
+            Args:
+                v (List[str]): The allowlist to validate.
 
-        Returns:
-            List[str]: The validated allowlist.
+            Returns:
+                List[str]: The validated allowlist.
 
-        Raises:
-            ValueError: If any entry is not a valid host or scheme.
-        """
-        if v is None:
+            Raises:
+                ValueError: If allowlist is not a list or any entry is not a valid host/scheme string.
+            """
+            if v is None:
+                return None
+            if not isinstance(v, list):
+                raise ValueError("allowlist must be a list of host/scheme strings")
+            hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
+            for host in v:
+                if not isinstance(host, str):
+                    raise ValueError(f"Invalid type in allowlist: {host} (must be str)")
+                if not hostname_regex.match(host):
+                    raise ValueError(f"Invalid host/scheme in allowlist: {host}")
             return v
-        hostname_regex = re.compile(r"^(https?://)?([a-zA-Z0-9.-]+)(:[0-9]+)?$")
-        for host in v:
-            if not hostname_regex.match(host):
-                raise ValueError(f"Invalid host/scheme in allowlist: {host}")
-        return v
-
     @field_validator("plugin_chain_pre", "plugin_chain_post")
     @classmethod
     def validate_plugin_chain(cls, v):

@@ -1449,6 +1449,7 @@ class ToolService:
         return result
 
     async def _call_a2a_agent(self, agent: DbA2AAgent, parameters: Dict[str, Any], interaction_type: str = "query") -> Dict[str, Any]:
+        
         """Call an A2A agent directly.
 
         Args:
