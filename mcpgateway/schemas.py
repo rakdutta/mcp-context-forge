@@ -353,7 +353,10 @@ class ToolCreate(BaseModel):
     path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
     query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
     header_mapping: Optional[Dict[str, Any]] = Field(None, description="Header mapping for REST passthrough")
-    timeout_ms: Optional[int] = Field(20000, description="Timeout in milliseconds for REST passthrough")
+    timeout_ms: Optional[int] = Field(
+        default=None,
+        description="Timeout in milliseconds for REST passthrough (20000 if integration_type='REST', else None)"
+    )
     expose_passthrough: Optional[bool] = Field(True, description="Expose passthrough endpoint for this tool")
     allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
     plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
@@ -820,7 +823,10 @@ class ToolUpdate(BaseModelWithConfigDict):
     path_template: Optional[str] = Field(None, description="Path template for REST passthrough")
     query_mapping: Optional[Dict[str, Any]] = Field(None, description="Query mapping for REST passthrough")
     header_mapping: Optional[Dict[str, Any]] = Field(None, description="Header mapping for REST passthrough")
-    timeout_ms: Optional[int] = Field(20000, description="Timeout in milliseconds for REST passthrough")
+    timeout_ms: Optional[int] = Field(
+        default=None,
+        description="Timeout in milliseconds for REST passthrough (20000 if integration_type='REST', else None)"
+    )
     expose_passthrough: Optional[bool] = Field(True, description="Expose passthrough endpoint for this tool")
     allowlist: Optional[List[str]] = Field(None, description="Allowed upstream hosts/schemes for passthrough")
     plugin_chain_pre: Optional[List[str]] = Field(None, description="Pre-plugin chain for passthrough")
