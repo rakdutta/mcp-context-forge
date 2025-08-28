@@ -846,7 +846,6 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
     except KeyError as e:
         # Convert KeyError to ValidationError-like response
         return JSONResponse(content={"message": f"Missing required field: {e}", "success": False}, status_code=422)
-    
     try:
         user_email = get_user_email(user)
         # Determine personal team for default assignment
