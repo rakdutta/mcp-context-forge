@@ -193,7 +193,7 @@ class ErrorFormatter:
             "Tool URL must start with": f"{field.title()} must be a valid HTTP or WebSocket URL",
             "cannot contain directory traversal": f"{field.title()} contains invalid characters",
             "contains HTML tags": f"{field.title()} cannot contain HTML or script tags",
-            "Server ID must be a valid UUID format": f"{field.title()} must be a valid UUID (e.g., 8bed6a02-2aaf-41bf-b45a-e9ba4c793adf)",
+            "Server ID must be a valid UUID format": f"{field.title()} must be a valid UUID",
         }
 
         for pattern, friendly_msg in mappings.items():
