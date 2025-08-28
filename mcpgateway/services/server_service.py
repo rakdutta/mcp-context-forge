@@ -15,7 +15,6 @@ It also publishes event notifications for server changes.
 import asyncio
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Dict, List, Optional
-import uuid as uuid_module
 
 # Third-Party
 import httpx
