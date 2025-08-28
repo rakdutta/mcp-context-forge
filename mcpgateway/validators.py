@@ -515,6 +515,7 @@ class SecurityValidator:
             # Return the normalized string representation
             return str(uuid_obj)
         except ValueError:
+            logger.error(f"Invalid UUID format for {field_name}: {value}")  
             raise ValueError(f"{field_name} must be a valid UUID format")
 
     @classmethod

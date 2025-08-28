@@ -831,6 +831,8 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
 
     try:
         LOGGER.debug(f"User {get_user_email(user)} is adding a new server with name: {form['name']}")
+        id=form.get("id")
+        LOGGER.info(f" user input id::{id}")
         server = ServerCreate(
             id=form.get("id") or None,
             name=form.get("name"),
@@ -841,10 +843,10 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
             associated_prompts=",".join(form.getlist("associatedPrompts")),
             tags=tags,
         )
+        LOGGER.info(f"server id after schema validation::{server.id}")
     except KeyError as e:
         # Convert KeyError to ValidationError-like response
         return JSONResponse(content={"message": f"Missing required field: {e}", "success": False}, status_code=422)
-
     try:
         user_email = get_user_email(user)
         # Determine personal team for default assignment
@@ -1014,6 +1016,9 @@ async def admin_edit_server(
             associated_prompts=",".join(form.getlist("associatedPrompts")),
             tags=tags,
         )
+        LOGGER.info(f"server_id from ui:{server_id}")
+        LOGGER.info(f"After schema validation server id:{server.id}")
+        
         await server_service.update_server(db, server_id, server)
 
         return JSONResponse(
