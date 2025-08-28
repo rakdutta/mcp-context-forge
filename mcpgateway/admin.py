@@ -843,7 +843,6 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
             associated_prompts=",".join(form.getlist("associatedPrompts")),
             tags=tags,
         )
-        LOGGER.info(f"server id after schema validation::{server.id}")
     except KeyError as e:
         # Convert KeyError to ValidationError-like response
         return JSONResponse(content={"message": f"Missing required field: {e}", "success": False}, status_code=422)
@@ -1016,9 +1015,6 @@ async def admin_edit_server(
             associated_prompts=",".join(form.getlist("associatedPrompts")),
             tags=tags,
         )
-        LOGGER.info(f"server_id from ui:{server_id}")
-        LOGGER.info(f"After schema validation server id:{server.id}")
-        
         await server_service.update_server(db, server_id, server)
 
         return JSONResponse(

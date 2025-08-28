@@ -637,7 +637,6 @@ class ServerService:
                     )
 
             # Update simple fields
-            logger.info(f"server_update_id::{server_update.id}, server_id::{server.id}")
             if server_update.id is not None and server_update.id != server.id:
                 # Check if the new UUID is already in use
                 existing = db.get(DbServer, server_update.id)

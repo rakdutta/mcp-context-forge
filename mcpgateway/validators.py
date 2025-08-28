@@ -512,7 +512,6 @@ class SecurityValidator:
         try:
             # Validate UUID format by attempting to parse it
             uuid_obj = uuid.UUID(value)
-            
             # Return the normalized string representation
             return str(uuid_obj).replace("-", "")
         except ValueError:
