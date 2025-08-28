@@ -350,10 +350,7 @@ class ServerService:
             # Set custom UUID if provided
             if server_in.id:
                 logger.info(f"Setting custom UUID for server: {server_in.id}")
-                # Normalize UUID to hex format (no dashes) to match database storage
-                normalized_uuid = str(uuid_module.UUID(server_in.id)).replace("-", "")
-                logger.info(f"normalized_uuid for server: {normalized_uuid}")
-                db_server.id = normalized_uuid
+                db_server.id = server_in.id
             db.add(db_server)
 
             # Associate tools, verifying each exists.
@@ -641,14 +638,6 @@ class ServerService:
 
             # Update simple fields
             logger.info(f"server_update_id::{server_update.id}, server_id::{server.id}")
-            # Set custom UUID if provided
-            if server_update.id:
-                logger.info(f"Setting custom UUID for server: {server_update.id}")
-                # Normalize UUID to hex format (no dashes) to match database storage
-                normalized_uuid = str(uuid_module.UUID(server_update.id)).replace("-", "")
-                server_update.id=normalized_uuid
-                logger.info(f"normalized_uuid::{normalized_uuid}")
-
             if server_update.id is not None and server_update.id != server.id:
                 # Check if the new UUID is already in use
                 existing = db.get(DbServer, server_update.id)
