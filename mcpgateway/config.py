@@ -795,7 +795,24 @@ Disallow: /
     # Masking value for all sensitive data
     masked_auth_value: str = "*****"
 
+    # Rest Passthrough
+    passthrough_enabled: bool = True
+    passthrough_base_path: str = "/passthrough"
+    passthrough_default_timeout_ms: int = 20000
+    passthrough_default_plugin_chains_pre: list = ["deny_filter", "regex_filter", "pii_filter"]
+    passthrough_default_plugin_chains_post: list = ["pii_filter"]
 
+    @property
+    def passthrough_config(self) -> dict:
+        return {
+            "enabled": self.passthrough_enabled,
+            "base_path": self.passthrough_base_path,
+            "default_timeout_ms": self.passthrough_default_timeout_ms,
+            "default_plugin_chains": {
+                "pre": self.passthrough_default_plugin_chains_pre,
+                "post": self.passthrough_default_plugin_chains_post,
+            }
+        }
 def extract_using_jq(data, jq_filter=""):
     """
     Extracts data from a given input (string, dict, or list) using a jq filter string.
