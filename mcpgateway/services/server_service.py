@@ -81,7 +81,8 @@ class ServerNameConflictError(ServerError):
         self.name = name
         self.is_active = is_active
         self.server_id = server_id
-        message = f"Server already exists with name: {name}"
+        #message = f"Server already exists with name: {name}"
+        message = f"A public server with the name '{name}' already exists. Please choose a different name."
         if not is_active:
             message += f" (currently inactive, ID: {server_id})"
         super().__init__(message)
@@ -345,8 +346,22 @@ class ServerService:
                 owner_email=getattr(server_in, "owner_email", None) or owner_email or created_by,
                 visibility=getattr(server_in, "visibility", None) or visibility,
             )
-
-            # Set custom UUID if provided
+           # Check for existing server with the same name
+            if visibility.lower() == "public":
+                # Check for existing public server with the same name
+                existing_server = db.execute(
+                    select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "public")
+                ).scalar_one_or_none()
+                if existing_server:
+                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id)
+            elif visibility.lower() == "team" and team_id:
+                # Check for existing team server with the same name
+                existing_server = db.execute(
+                    select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "team", DbServer.team_id == team_id)
+                ).scalar_one_or_none()
+                if existing_server:
+                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id)
+        # Set custom UUID if provided
             if server_in.id:
                 logger.info(f"Setting custom UUID for server: {server_in.id}")
                 db_server.id = server_in.id
@@ -423,6 +438,9 @@ class ServerService:
             db.rollback()
             logger.error(f"IntegrityErrors in group: {ie}")
             raise ie
+        except ServerNameConflictError as se:
+            db.rollback()
+            raise se
         except Exception as ex:
             db.rollback()
             raise ServerError(f"Failed to register server: {str(ex)}")
@@ -625,15 +643,25 @@ class ServerService:
             if not server:
                 raise ServerNotFoundError(f"Server not found: {server_id}")
 
-            # Check for name conflict if name is being changed
+            # Check for name conflict if name is being changed and visibility is public
             if server_update.name and server_update.name != server.name:
-                conflict = db.execute(select(DbServer).where(DbServer.name == server_update.name).where(DbServer.id != server_id)).scalar_one_or_none()
-                if conflict:
-                    raise ServerNameConflictError(
-                        server_update.name,
-                        is_active=conflict.is_active,
-                        server_id=conflict.id,
-                    )
+                visibility = server_update.visibility or server.visibility
+                team_id = server_update.team_id or server.team_id
+                if visibility.lower() == "public":
+                    # Check for existing public server with the same name
+                    existing_server = db.execute(
+                        select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "public")
+                    ).scalar_one_or_none()
+                    if existing_server:
+                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id)
+                elif visibility.lower() == "team" and team_id:
+                # Check for existing team server with the same name
+                    existing_server = db.execute(
+                        select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "team", DbServer.team_id == team_id)
+                    ).scalar_one_or_none()
+                    if existing_server:
+                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id)
+        
 
             # Update simple fields
             if server_update.id is not None and server_update.id != server.id:
