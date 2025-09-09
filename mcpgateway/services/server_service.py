@@ -50,39 +50,49 @@ class ServerNotFoundError(ServerError):
 class ServerNameConflictError(ServerError):
     """Raised when a server name conflicts with an existing one."""
 
-    def __init__(self, name: str, is_active: bool = True, server_id: Optional[int] = None):
-        """Initialize a ServerNameConflictError exception.
+    def __init__(self, name: str, is_active: bool = True, server_id: Optional[int] = None, visibility: str = "public") -> None:
+        """
+        Initialize a ServerNameConflictError exception.
 
-        Creates an exception that indicates a server name conflict, with additional
-        context about whether the conflicting server is active and its ID if known.
-        The error message is customized based on the server's active status.
+        This exception indicates a server name conflict, with additional context about visibility,
+        whether the conflicting server is active, and its ID if known. The error message starts
+        with the visibility information.
+
+        Visibility rules:
+            - public: Restricts server names globally (across all teams).
+            - team: Restricts server names only within the same team.
 
         Args:
             name: The server name that caused the conflict.
-            is_active: Whether the conflicting server is currently active.
-                    Defaults to True.
-            server_id: The ID of the conflicting server, if known.
-                    Only included in message for inactive servers.
+            is_active: Whether the conflicting server is currently active. Defaults to True.
+            server_id: The ID of the conflicting server, if known. Only included in message for inactive servers.
+            visibility: The visibility of the conflicting server (e.g., "public", "private", "team").
 
         Examples:
             >>> error = ServerNameConflictError("My Server")
             >>> str(error)
-            'Server already exists with name: My Server'
+            'Public Server already exists with name: My Server'
+
             >>> error = ServerNameConflictError("My Server", is_active=False, server_id=123)
             >>> str(error)
-            'Server already exists with name: My Server (currently inactive, ID: 123)'
-            >>> error.name
-            'My Server'
+            'Public Server already exists with name: My Server (currently inactive, ID: 123)'
             >>> error.is_active
             False
             >>> error.server_id
             123
+
+            >>> error = ServerNameConflictError("My Server", is_active=False, visibility="team")
+            >>> str(error)
+            'Team Server already exists with name: My Server (currently inactive, ID: None)'
+            >>> error.is_active
+            False
+            >>> error.server_id is None
+            True
         """
         self.name = name
         self.is_active = is_active
         self.server_id = server_id
-        #message = f"Server already exists with name: {name}"
-        message = f"A public server with the name '{name}' already exists. Please choose a different name."
+        message = f"{visibility.capitalize()} Server already exists with name: {name}"
         if not is_active:
             message += f" (currently inactive, ID: {server_id})"
         super().__init__(message)
@@ -353,14 +363,14 @@ class ServerService:
                     select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "public")
                 ).scalar_one_or_none()
                 if existing_server:
-                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id)
+                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
             elif visibility.lower() == "team" and team_id:
                 # Check for existing team server with the same name
                 existing_server = db.execute(
                     select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "team", DbServer.team_id == team_id)
                 ).scalar_one_or_none()
                 if existing_server:
-                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id)
+                    raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
         # Set custom UUID if provided
             if server_in.id:
                 logger.info(f"Setting custom UUID for server: {server_in.id}")
@@ -653,14 +663,14 @@ class ServerService:
                         select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "public")
                     ).scalar_one_or_none()
                     if existing_server:
-                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id)
+                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
                 elif visibility.lower() == "team" and team_id:
                 # Check for existing team server with the same name
                     existing_server = db.execute(
                         select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "team", DbServer.team_id == team_id)
                     ).scalar_one_or_none()
                     if existing_server:
-                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id)
+                        raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
         
 
             # Update simple fields
