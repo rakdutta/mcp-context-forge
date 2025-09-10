@@ -322,6 +322,7 @@ class ServerService:
 
         Raises:
             IntegrityError: If a database integrity error occurs.
+            ServerNameConflictError: If a server name conflict occurs (public or team visibility).
             ServerError: If any associated tool, resource, or prompt does not exist, or if any other registration error occurs.
 
         Examples:
@@ -356,22 +357,18 @@ class ServerService:
                 owner_email=getattr(server_in, "owner_email", None) or owner_email or created_by,
                 visibility=getattr(server_in, "visibility", None) or visibility,
             )
-           # Check for existing server with the same name
+            # Check for existing server with the same name
             if visibility.lower() == "public":
                 # Check for existing public server with the same name
-                existing_server = db.execute(
-                    select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "public")
-                ).scalar_one_or_none()
+                existing_server = db.execute(select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "public")).scalar_one_or_none()
                 if existing_server:
                     raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
             elif visibility.lower() == "team" and team_id:
                 # Check for existing team server with the same name
-                existing_server = db.execute(
-                    select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "team", DbServer.team_id == team_id)
-                ).scalar_one_or_none()
+                existing_server = db.execute(select(DbServer).where(DbServer.name == server_in.name, DbServer.visibility == "team", DbServer.team_id == team_id)).scalar_one_or_none()
                 if existing_server:
                     raise ServerNameConflictError(server_in.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
-        # Set custom UUID if provided
+            # Set custom UUID if provided
             if server_in.id:
                 logger.info(f"Setting custom UUID for server: {server_in.id}")
                 db_server.id = server_in.id
@@ -659,19 +656,14 @@ class ServerService:
                 team_id = server_update.team_id or server.team_id
                 if visibility.lower() == "public":
                     # Check for existing public server with the same name
-                    existing_server = db.execute(
-                        select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "public")
-                    ).scalar_one_or_none()
+                    existing_server = db.execute(select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "public")).scalar_one_or_none()
                     if existing_server:
                         raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
                 elif visibility.lower() == "team" and team_id:
-                # Check for existing team server with the same name
-                    existing_server = db.execute(
-                        select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "team", DbServer.team_id == team_id)
-                    ).scalar_one_or_none()
+                    # Check for existing team server with the same name
+                    existing_server = db.execute(select(DbServer).where(DbServer.name == server_update.name, DbServer.visibility == "team", DbServer.team_id == team_id)).scalar_one_or_none()
                     if existing_server:
                         raise ServerNameConflictError(server_update.name, is_active=existing_server.is_active, server_id=existing_server.id, visibility=existing_server.visibility)
-        
 
             # Update simple fields
             if server_update.id is not None and server_update.id != server.id:
