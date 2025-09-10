@@ -870,10 +870,10 @@ async def admin_add_server(request: Request, db: Session = Depends(get_db), user
 
     except CoreValidationError as ex:
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=422)
-    except ServerError as ex:
-        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
     except ServerNameConflictError as ex:
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=409)
+    except ServerError as ex:
+        return JSONResponse(content={"message": str(ex), "success": False}, status_code=500)
     except ValueError as ex:
         return JSONResponse(content={"message": str(ex), "success": False}, status_code=400)
     except ValidationError as ex:
